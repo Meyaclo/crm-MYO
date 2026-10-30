@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CRM Meyaclo</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--bg:#f5f6f8;--card:#fff;--ink:#1d2433;--mute:#6b7385;--line:#e3e6ec;--accent:#0f6e8c;--accent2:#e8f3f7;--danger:#c0392b}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);display:flex;min-height:100vh;font-size:14px}
+nav{width:210px;background:#152238;color:#fff;padding:18px 0;flex-shrink:0}
+nav h1{font-size:16px;padding:0 18px 16px;margin:0;border-bottom:1px solid #2a3a55}
+nav a{display:block;padding:10px 18px;color:#c9d3e3;text-decoration:none;cursor:pointer;white-space:nowrap}
+nav a.on,nav a:hover{background:#22355a;color:#fff}
+.who{padding:18px;color:#8fa0bb;font-size:12px;border-top:1px solid #2a3a55;margin-top:12px}
+main{flex:1;padding:24px;overflow:auto}
+h2{margin:0 0 16px}h3{margin-top:0}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px;overflow-x:auto}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px}
+.kpi b{display:block;font-size:22px;margin:4px 0}
+.kpi span{color:var(--mute);font-size:12px}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line)}
+th{font-size:12px;color:var(--mute);font-weight:600;background:#fafbfc}
+td.n,th.n{text-align:right;white-space:nowrap}
+tr.click{cursor:pointer}tr.click:hover{background:var(--accent2)}
+button{background:var(--accent);color:#fff;border:0;border-radius:6px;padding:8px 12px;cursor:pointer;font-size:13px}
+button.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+button.del{background:#fff;color:var(--danger);border:1px solid var(--line)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{border-radius:0;background:#fff;color:var(--ink)}.seg button.on{background:var(--accent);color:#fff}
+input,select,textarea{border:1px solid var(--line);border-radius:6px;padding:7px 9px;font:inherit;background:#fff}
+.up{color:#1e8449}.down{color:var(--danger)}
+.barfill{height:8px;background:var(--accent);border-radius:4px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+.day{background:#fff;border:1px solid var(--line);border-radius:8px;min-height:320px;padding:8px}
+.day.today{border:2px solid var(--accent)}
+.day h4{margin:0 0 8px;font-size:12px;color:var(--mute);text-transform:capitalize}
+.ev{border-left:4px solid;padding:5px 7px;margin-bottom:6px;border-radius:4px;background:#f7f9fb;font-size:12px;cursor:pointer}
+.chip{display:inline-flex;align-items:center;gap:5px;margin-right:10px}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:9}
+.modal .box{background:#fff;border-radius:10px;padding:20px;width:min(520px,94vw);max-height:90vh;overflow:auto}
+.f{display:flex;flex-direction:column;margin-bottom:10px}
+.f label{font-size:12px;color:var(--mute);margin-bottom:3px}
+.mute{color:var(--mute)}
+#implog{font-size:13px;margin-top:10px;line-height:1.5}
+@media(max-width:800px){body{flex-direction:column}nav{width:100%;display:flex;overflow-x:auto;padding:0}nav h1{display:none}.who{border:0;margin:0;padding:10px 18px}.grid2{grid-template-columns:1fr}.week{grid-template-columns:1fr}.day{min-height:auto}}
+</style>
+</head>
+<body>
+<nav id="nav" style="display:none"></nav>
+<main id="app"><p class="mute">Chargement…</p></main>
+<div id="modal"></div>
+<script>
+// ======================= CONFIGURATION =======================
+const SUPABASE_URL = 'https://ramwufwyvdsnfeepqoio.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_BOnwcJ78GLGk7F4L1dFgxg_4Zf0zFqC';
+// =============================================================
+
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const KINDS=['brands','users','clients','orders','events'];
+const BRANDS=['Rip Curl','Stance','I-SEA','YETI','Coolway','Rudsak','Rehall','Nikkie','Aspen Collection','Trendsplant','Natif'];
+const TYPES=['INITIAL','REASSORT','HO','SP','SU','FA','SNOW'];
+const COLORS=['#0f6e8c','#c0392b','#8e44ad','#d68910','#1e8449','#2c3e50','#e67e22','#16a085'];
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+const eur=n=>(n||0).toLocaleString('fr-FR',{style:'currency',currency:'EUR',maximumFractionDigits:0});
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const N=s=>String(s??'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const fmtDate=d=>d?new Date(d+'T00:00').toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short',year:'2-digit'}):'';
+function monday(d){d=new Date(d);d.setDate(d.getDate()-(d.getDay()+6)%7);d.setHours(0,0,0,0);return d}
+
+/* ---------- Saisons (SS27 = printemps-été 2027, FW26 = automne-hiver 2026 ; PE/AH acceptés) ---------- */
+const SRX=/^(SS|FW|PE|AH)(\d{2})$/;
+function sVal(s){const m=SRX.exec(s||'');return m?2000+ +m[2]+((m[1]==='FW'||m[1]==='AH')?.5:0):0}
+function sPrev(s){const m=SRX.exec(s||'');return m?m[1]+String(+m[2]-1).padStart(2,'0'):''}
+function seasonDate(s){const m=SRX.exec(s||'');if(!m)return iso(new Date());const y=2000+ +m[2];return(m[1]==='FW'||m[1]==='AH')?`${y}-03-01`:`${y-1}-10-01`}
+function seasons(){return[...new Set(db.orders.map(o=>o.season).filter(Boolean))].sort((a,b)=>sVal(b)-sVal(a)||b.localeCompare(a))}
+
+function seed(){return{brands:BRANDS.map(n=>({id:uid(),name:n,commission:12,contact:'',notes:''})),users:[{id:uid(),name:'Moi',email:'',color:COLORS[0]}],clients:[],orders:[],events:[]}}
+let db={brands:[],users:[],clients:[],orders:[],events:[]},me=null,pending=false,importing=false,impLog='';
+const byId=(arr,id)=>db[arr].find(x=>x.id===id);
+const yearOf=o=>+(o.date||'').slice(0,4);
+const CUR=new Date().getFullYear();
+const sortedClients=()=>[...db.clients].sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+let state={view:'dash',mode:'season',season:'',clientId:null,year:CUR,weekStart:monday(new Date()),hiddenUsers:[],q:'',fActive:'',fBrand:'',fClient:'',fSeason:'',fUser:'',fType:''};
+
+/* ---------- Connexion & synchronisation Supabase ---------- */
+function vLogin(msg){document.getElementById('nav').style.display='none';
+document.getElementById('app').innerHTML=`<div class="card" style="max-width:380px;margin:60px auto"><h2>CRM Meyaclo</h2><form id="lf"><div class="f"><label>E-mail</label><input name="email" type="email" required autocomplete="username"></div><div class="f"><label>Mot de passe</label><input name="pw" type="password" required autocomplete="current-password"></div><button type="submit">Se connecter</button><p class="down">${esc(msg||'')}</p></form></div>`;
+document.getElementById('lf').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target);const{error}=await sb.auth.signInWithPassword({email:f.get('email'),password:f.get('pw')});if(error)vLogin('Identifiants incorrects.');else start()}}
+
+async function start(){
+const{data:{session}}=await sb.auth.getSession();if(!session)return vLogin();
+me=session.user;document.getElementById('nav').style.display='';
+document.getElementById('app').innerHTML='<p class="mute">Chargement des données…</p>';
+try{await loadAll()}catch(e){document.getElementById('app').innerHTML=`<p class="down">Erreur de connexion à la base : ${esc(e.message)}</p>`;return}
+if(!db.brands.length&&!db.users.length){const s=seed();s.users[0].name=me.email.split('@')[0];s.users[0].email=me.email;await putMany([...s.brands.map(x=>['brands',x]),...s.users.map(x=>['users',x])]);db=s}
+listen();render()}
+
+async function loadAll(){const d={brands:[],users:[],clients:[],orders:[],events:[]};
+for(let from=0;;from+=1000){const{data,error}=await sb.from('records').select('id,kind,data').order('id').range(from,from+999);if(error)throw error;data.forEach(r=>{if(d[r.kind])d[r.kind].push(r.data)});if(data.length<1000)break}db=d}
+
+async function putMany(items,onProgress){for(let i=0;i<items.length;i+=500){const{error}=await sb.from('records').upsert(items.slice(i,i+500).map(([k,o])=>({id:o.id,kind:k,data:o,updated_at:new Date().toISOString()})));if(error){alert('Erreur d\'enregistrement : '+error.message);return false}if(onProgress)onProgress(Math.min(i+500,items.length),items.length)}return true}
+
+function listen(){sb.channel('records').on('postgres_changes',{event:'*',schema:'public',table:'records'},p=>{
+if(p.eventType==='DELETE'){const id=p.old.id;KINDS.forEach(k=>db[k]=db[k].filter(x=>x.id!==id))}
+else{const r=p.new;if(!db[r.kind])return;const i=db[r.kind].findIndex(x=>x.id===r.id);if(i>=0)db[r.kind][i]=r.data;else db[r.kind].push(r.data)}
+refresh()}).subscribe()}
+function refresh(){clearTimeout(window._rf);window._rf=setTimeout(()=>{if(importing||document.getElementById('modal').innerHTML||document.activeElement?.id==='q'){pending=true;return}render()},300)}
+async function logout(){await sb.auth.signOut();location.reload()}
+
+function upsert(arr,id,d){let o;if(id){o=byId(arr,id);Object.assign(o,d)}else{o={id:uid(),...d};db[arr].push(o)}putMany([[arr,o]])}
+function remove(arr,id){db[arr]=db[arr].filter(x=>x.id!==id);sb.from('records').delete().eq('id',id).then(({error})=>{if(error)alert('Erreur de suppression : '+error.message)})}
+
+/* ---------- Calculs ---------- */
+const ok=o=>o.status!=='Annulée';
+function ca(f){return db.orders.reduce((s,o)=>ok(o)&&f(o)?s+(+o.amount||0):s,0)}
+function comm(o){const b=byId('brands',o.brandId);return ok(o)?(+o.amount||0)*((+b?.commission||0)/100):0}
+function agg(keyFn,f){const m=new Map();for(const o of db.orders){if(!ok(o)||!f(o))continue;const k=keyFn(o);let a=m.get(k);if(!a)m.set(k,a={v:0,obj:0,n1:0,c:0,n:0});a.v+=+o.amount||0;a.obj+=+o.objective||0;a.n1+=+o.n1||0;a.c+=comm(o);a.n++}return m}
+const Z={v:0,obj:0,n1:0,c:0,n:0};
+function years(){const s=new Set(db.orders.map(yearOf).filter(Boolean));s.add(CUR);return[...s].sort((a,b)=>b-a)}
+function evo(a,b){if(!b)return a?'<span class="up">nouveau</span>':'—';const p=(a-b)/b*100;return`<span class="${p>=0?'up':'down'}">${p>=0?'+':''}${p.toFixed(0)} %</span>`}
+function pct(a,b){if(!b)return'—';const p=a/b*100;return`<span class="${p>=100?'up':'down'}">${p.toFixed(0)} %</span>`}
+function curSeason(){const ss=seasons();if(!ss.includes(state.season))state.season=ss[0]||'';return state.season}
+
+/* ---------- Navigation ---------- */
+const VIEWS=[['dash','Tableau de bord'],['clients','Clients'],['orders','Commandes'],['agenda','Agenda'],['brands','Marques'],['team','Équipe'],['export','Import / Export']];
+function nav(){document.getElementById('nav').innerHTML='<h1>CRM Meyaclo</h1>'+VIEWS.map(([k,l])=>`<a class="${state.view===k||(k==='clients'&&state.view==='client')?'on':''}" onclick="go('${k}')">${l}</a>`).join('')+`<div class="who">${esc(me?.email)}<br><a onclick="logout()" style="padding:6px 0">Déconnexion</a></div>`}
+function go(v,extra){Object.assign(state,{view:v},extra||{});render()}
+function render(){nav();const V={dash:vDash,clients:vClients,client:vClient,orders:vOrders,agenda:vAgenda,brands:vBrands,team:vTeam,export:vExport};document.getElementById('app').innerHTML=V[state.view]()}
+
+function evLine(e){const u=byId('users',e.userId),c=byId('clients',e.clientId);return`<div class="ev" style="border-color:${u?.color||'#999'}" onclick="editEvent('${e.id}')"><b>${fmtDate(e.date)} ${e.start||''}</b> · ${esc(e.type)} · ${esc(e.title)}${c?' — '+esc(c.name):''} <span class="mute">(${esc(u?.name)})</span>${e.report?'<br><span class="mute">'+esc(e.report)+'</span>':''}</div>`}
+const seasonSel=(onch)=>`<select onchange="${onch}">${seasons().map(s=>`<option ${s===state.season?'selected':''}>${s}</option>`).join('')}</select>`;
+
+/* ---------- Vues ---------- */
+function vDash(){const today=iso(new Date());
+const next=db.events.filter(e=>e.date>=today).sort((a,b)=>(a.date+(a.start||'')).localeCompare(b.date+(b.start||''))).slice(0,6);
+const rdv=`<h3 style="margin-top:20px">Prochains rendez-vous</h3>${next.length?next.map(evLine).join(''):'<p class="mute">Rien de prévu.</p>'}`;
+const seg=`<span class="seg"><button class="${state.mode==='season'?'on':''}" onclick="state.mode='season';render()">Par saison</button><button class="${state.mode==='year'?'on':''}" onclick="state.mode='year';render()">Par année</button></span>`;
+const cname=id=>byId('clients',id)?.name||'?';
+
+if(state.mode==='season'){const S=curSeason();
+if(!S)return`<h2>Tableau de bord</h2><div class="bar">${seg}</div><div class="card"><p>Aucune commande pour l'instant. Importez vos fichiers dans <a onclick="go('export')" style="color:var(--accent);cursor:pointer">Import / Export</a>.</p></div>`;
+const inS=o=>o.season===S,T=agg(()=>1,inS).get(1)||Z;
+const active=new Set(db.orders.filter(o=>ok(o)&&inS(o)&&+o.amount).map(o=>o.clientId)).size;
+const tbl=(title,m,label)=>{const rows=[...m.entries()].filter(([,a])=>a.v||a.obj||a.n1).sort((a,b)=>b[1].v-a[1].v);const max=Math.max(1,...rows.map(r=>r[1].v));
+return`<div class="card"><h3>${title}</h3><table><tr><th>${label[0]}</th><th></th><th class="n">Réalisé</th><th class="n">Objectif</th><th class="n">% obj.</th><th class="n">N-1</th><th class="n">Évol.</th></tr>${rows.map(([k,a])=>`<tr><td>${esc(label[1](k))}</td><td style="width:18%"><div class="barfill" style="width:${a.v/max*100}%"></div></td><td class="n">${eur(a.v)}</td><td class="n">${eur(a.obj)}</td><td class="n">${pct(a.v,a.obj)}</td><td class="n">${eur(a.n1)}</td><td class="n">${evo(a.v,a.n1)}</td></tr>`).join('')}</table></div>`};
+const byC=[...agg(o=>o.clientId,inS).entries()].sort((a,b)=>b[1].v-a[1].v).slice(0,15);
+return`<h2>Tableau de bord</h2><div class="bar">${seg} Saison ${seasonSel("state.season=this.value;render()")}<span class="mute">N-1 = ${esc(sPrev(S))}</span></div>
+<div class="kpis">
+<div class="kpi"><span>Réalisé ${esc(S)}</span><b>${eur(T.v)}</b>${evo(T.v,T.n1)} vs N-1</div>
+<div class="kpi"><span>Objectif ${esc(S)}</span><b>${eur(T.obj)}</b>${pct(T.v,T.obj)} atteint</div>
+<div class="kpi"><span>N-1 (${esc(sPrev(S))})</span><b>${eur(T.n1)}</b></div>
+<div class="kpi"><span>Commissions estimées</span><b>${eur(T.c)}</b></div>
+<div class="kpi"><span>Clients actifs</span><b>${active}</b>${T.n} lignes de commande</div></div>
+<div class="grid2"><div>${tbl('CA par marque',agg(o=>o.brandId,inS),['Marque',k=>byId('brands',k)?.name||'?'])}${tbl('CA par commercial',agg(o=>o.userId||'',inS),['Commercial',k=>byId('users',k)?.name||'Non affecté'])}</div>
+<div class="card"><h3>Top 15 clients ${esc(S)}</h3>${byC.length?`<table><tr><th>Client</th><th class="n">Réalisé</th><th class="n">N-1</th><th class="n">Évol.</th></tr>${byC.map(([k,a])=>`<tr class="click" onclick="go('client',{clientId:'${k}'})"><td>${esc(cname(k))}</td><td class="n">${eur(a.v)}</td><td class="n">${eur(a.n1)}</td><td class="n">${evo(a.v,a.n1)}</td></tr>`).join('')}</table>`:'<p class="mute">Aucune commande.</p>'}${rdv}</div></div>`}
+
+const y=state.year,Ty=agg(()=>1,o=>yearOf(o)===y).get(1)||Z,Tp=agg(()=>1,o=>yearOf(o)===y-1).get(1)||Z;
+const active=new Set(db.orders.filter(o=>ok(o)&&yearOf(o)===y).map(o=>o.clientId)).size;
+const bY=agg(o=>o.brandId,o=>yearOf(o)===y),bP=agg(o=>o.brandId,o=>yearOf(o)===y-1);
+const byB=db.brands.map(b=>({b,v:(bY.get(b.id)||Z).v,p:(bP.get(b.id)||Z).v})).filter(x=>x.v||x.p).sort((a,b)=>b.v-a.v);
+const max=Math.max(1,...byB.map(x=>x.v));
+const cY=agg(o=>o.clientId,o=>yearOf(o)===y),cP=agg(o=>o.clientId,o=>yearOf(o)===y-1);
+const byC=[...new Set([...cY.keys(),...cP.keys()])].map(k=>({k,v:(cY.get(k)||Z).v,p:(cP.get(k)||Z).v})).sort((a,b)=>b.v-a.v).slice(0,15);
+return`<h2>Tableau de bord</h2><div class="bar">${seg} Année <select onchange="state.year=+this.value;render()">${years().map(v=>`<option ${v===y?'selected':''}>${v}</option>`).join('')}</select><span class="mute">Saisons importées datées : FW au 1er mars, SS au 1er octobre de l'année précédente.</span></div>
+<div class="kpis">
+<div class="kpi"><span>CA ${y}</span><b>${eur(Ty.v)}</b>${evo(Ty.v,Tp.v)} vs ${y-1}</div>
+<div class="kpi"><span>CA ${y-1}</span><b>${eur(Tp.v)}</b></div>
+<div class="kpi"><span>Commissions estimées ${y}</span><b>${eur(Ty.c)}</b></div>
+<div class="kpi"><span>Clients actifs ${y}</span><b>${active}</b>sur ${db.clients.length}</div></div>
+<div class="grid2"><div class="card"><h3>CA par marque</h3><table><tr><th>Marque</th><th></th><th class="n">${y}</th><th class="n">${y-1}</th><th class="n">Évol.</th></tr>
+${byB.map(x=>`<tr><td>${esc(x.b.name)}</td><td style="width:28%"><div class="barfill" style="width:${x.v/max*100}%"></div></td><td class="n">${eur(x.v)}</td><td class="n">${eur(x.p)}</td><td class="n">${evo(x.v,x.p)}</td></tr>`).join('')}</table></div>
+<div class="card"><h3>Top 15 clients</h3>${byC.length?`<table><tr><th>Client</th><th class="n">${y}</th><th class="n">${y-1}</th><th class="n">Évol.</th></tr>${byC.map(x=>`<tr class="click" onclick="go('client',{clientId:'${x.k}'})"><td>${esc(cname(x.k))}</td><td class="n">${eur(x.v)}</td><td class="n">${eur(x.p)}</td><td class="n">${evo(x.v,x.p)}</td></tr>`).join('')}</table>`:'<p class="mute">Aucune commande.</p>'}${rdv}</div></div>`}
+
+function vClients(){const q=N(state.q),S=curSeason();
+const m=agg(o=>o.clientId,o=>o.season===S),last=new Map();
+db.orders.forEach(o=>{if(ok(o)&&o.season&&sVal(o.season)>sVal(last.get(o.clientId)))last.set(o.clientId,o.season)});
+const list=sortedClients().filter(c=>(!q||N([c.name,c.city,c.dept,c.contact,c.hq].join(' ')).includes(q))&&(!state.fActive||(state.fActive==='ca')===last.has(c.id)));
+const shown=list.slice(0,500);
+return`<h2>Clients (${db.clients.length})</h2><div class="bar"><input id="q" placeholder="Rechercher nom, ville, dépt, siège…" value="${esc(state.q)}" oninput="state.q=this.value;clearTimeout(window._t);window._t=setTimeout(()=>{render();const i=document.getElementById('q');i.focus();i.setSelectionRange(i.value.length,i.value.length)},300)">
+<select onchange="state.fActive=this.value;render()"><option value="">Tous</option><option value="ca" ${state.fActive==='ca'?'selected':''}>Avec CA</option><option value="no" ${state.fActive==='no'?'selected':''}>Sans CA (prospects)</option></select>
+${S?'Saison '+seasonSel("state.season=this.value;render()"):''}<button onclick="editClient()">+ Nouveau client</button><span class="mute">${list.length} résultat(s)${list.length>500?' — 500 premiers affichés, affinez la recherche':''}</span></div>
+<div class="card"><table><tr><th>Enseigne</th><th>Ville</th><th>Dépt</th><th>Contact</th><th class="n">${esc(S||'CA')}</th><th class="n">N-1</th><th>Dernière saison</th></tr>
+${shown.map(c=>{const a=m.get(c.id)||Z;return`<tr class="click" onclick="go('client',{clientId:'${c.id}'})"><td><b>${esc(c.name)}</b></td><td>${esc(c.city)}</td><td>${esc(c.dept)}</td><td>${esc(c.contact)}</td><td class="n">${a.v?eur(a.v):''}</td><td class="n">${a.n1?eur(a.n1):''}</td><td>${esc(last.get(c.id)||'—')}</td></tr>`}).join('')||'<tr><td colspan="7" class="mute">Aucun client.</td></tr>'}</table></div>`}
+
+function ordersTable(os,showClient=true){return os.length?`<table><tr><th>Saison</th>${showClient?'<th>Client</th>':''}<th>Marque</th><th>Type</th><th>Commercial</th><th>Statut</th><th class="n">Objectif</th><th class="n">Réalisé HT</th><th class="n">N-1</th><th class="n">Commission</th></tr>${os.map(o=>`<tr class="click" onclick="editOrder('${o.id}')"><td>${esc(o.season)}</td>${showClient?`<td>${esc(byId('clients',o.clientId)?.name)}</td>`:''}<td>${esc(byId('brands',o.brandId)?.name)}</td><td>${esc(o.type)}</td><td>${esc(byId('users',o.userId)?.name)}</td><td>${esc(o.status)}</td><td class="n">${o.objective?eur(+o.objective):''}</td><td class="n">${eur(+o.amount)}</td><td class="n">${o.n1?eur(+o.n1):''}</td><td class="n">${eur(comm(o))}</td></tr>`).join('')}</table>`:'<p class="mute">Aucune commande.</p>'}
+const orderSort=(a,b)=>sVal(b.season)-sVal(a.season)||(b.date||'').localeCompare(a.date||'')||(+b.amount||0)-(+a.amount||0);
+
+function vClient(){const c=byId('clients',state.clientId);if(!c){state.view='clients';return vClients()}
+const os=db.orders.filter(o=>o.clientId===c.id).sort(orderSort);
+const ss=[...new Set(os.map(o=>o.season).filter(Boolean))].sort((a,b)=>sVal(b)-sVal(a)).slice(0,5);
+const bs=db.brands.filter(b=>os.some(o=>o.brandId===b.id));
+const evs=db.events.filter(e=>e.clientId===c.id).sort((a,b)=>b.date.localeCompare(a.date));
+return`<div class="bar"><button class="ghost" onclick="go('clients')">← Clients</button><h2 style="margin:0;flex:1">${esc(c.name)}</h2><button onclick="editOrder(null,'${c.id}')">+ Commande</button><button onclick="editEvent(null,'${c.id}')">+ RDV</button><button class="ghost" onclick="editClient('${c.id}')">Modifier</button></div>
+<div class="grid2"><div class="card"><h3>Fiche</h3><p>${esc(c.address)}<br>${esc(c.zip)} ${esc(c.city)} ${c.dept?'('+esc(c.dept)+')':''}${c.sector?'<br><span class="mute">'+esc(c.sector)+'</span>':''}</p><p>Contact : ${esc(c.contact)}<br>Tél : ${c.phone?`<a href="tel:${esc(c.phone)}">${esc(c.phone)}</a>`:''}${c.mobile?`<br>Portable : <a href="tel:${esc(c.mobile)}">${esc(c.mobile)}</a>`:''}<br>E-mail : ${c.email?`<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>`:''}</p>${c.hq&&c.hq!==c.name?`<p class="mute">Siège : ${esc(c.hq)}</p>`:''}${c.siret?`<p class="mute">SIRET ${esc(c.siret)}</p>`:''}<p style="white-space:pre-wrap">${esc(c.notes)}</p></div>
+<div class="card"><h3>CA par marque et par saison</h3>${bs.length?`<table><tr><th>Marque</th>${ss.map(s=>`<th class="n">${esc(s)}</th>`).join('')}</tr>${bs.map(b=>`<tr><td>${esc(b.name)}</td>${ss.map(s=>{const v=ca(o=>o.clientId===c.id&&o.brandId===b.id&&o.season===s);return`<td class="n">${v?eur(v):''}</td>`}).join('')}</tr>`).join('')}<tr><th>Total</th>${ss.map(s=>`<th class="n">${eur(ca(o=>o.clientId===c.id&&o.season===s))}</th>`).join('')}</tr></table>`:'<p class="mute">Pas encore de commande.</p>'}</div></div>
+<div class="card"><h3>Commandes</h3>${ordersTable(os,false)}</div>
+<div class="card"><h3>Rendez-vous & comptes rendus</h3>${evs.map(evLine).join('')||'<p class="mute">Aucun.</p>'}</div>`}
+
+function vOrders(){const ss=seasons();
+const os=db.orders.filter(o=>(!state.fBrand||o.brandId===state.fBrand)&&(!state.fClient||o.clientId===state.fClient)&&(!state.fSeason||o.season===state.fSeason)&&(!state.fUser||o.userId===state.fUser)&&(!state.fType||o.type===state.fType)).sort(orderSort);
+const T=os.filter(ok).reduce((s,o)=>({v:s.v+(+o.amount||0),obj:s.obj+(+o.objective||0),n1:s.n1+(+o.n1||0)}),{v:0,obj:0,n1:0});
+const usedClients=new Set(db.orders.map(o=>o.clientId));
+const sel=(k,opts,lab)=>`<select onchange="state.${k}=this.value;render()"><option value="">${lab}</option>${opts.map(([v,l])=>`<option value="${esc(v)}" ${state[k]===v?'selected':''}>${esc(l)}</option>`).join('')}</select>`;
+const shown=os.slice(0,800);
+return`<h2>Commandes</h2><div class="bar">${sel('fSeason',ss.map(s=>[s,s]),'Toutes saisons')}${sel('fBrand',[...db.brands].sort((a,b)=>a.name.localeCompare(b.name)).map(b=>[b.id,b.name]),'Toutes marques')}${sel('fUser',db.users.map(u=>[u.id,u.name]),'Tous commerciaux')}${sel('fType',TYPES.map(t=>[t,t]),'Tous types')}${sel('fClient',sortedClients().filter(c=>usedClients.has(c.id)).map(c=>[c.id,c.name]),'Tous clients')}<button onclick="editOrder()">+ Nouvelle commande</button></div>
+<div class="bar"><span class="mute">${os.length} ligne(s) — Réalisé <b>${eur(T.v)}</b> · Objectif <b>${eur(T.obj)}</b> (${pct(T.v,T.obj)}) · N-1 <b>${eur(T.n1)}</b> (${evo(T.v,T.n1)})${os.length>800?' — 800 premières lignes affichées':''}</span></div><div class="card">${ordersTable(shown)}</div>`}
+
+function vAgenda(){const ws=state.weekStart,days=[...Array(7)].map((_,i)=>{const d=new Date(ws);d.setDate(d.getDate()+i);return d}),today=iso(new Date());
+const vis=db.events.filter(e=>!state.hiddenUsers.includes(e.userId));
+return`<h2>Agenda équipe</h2><div class="bar"><button class="ghost" onclick="shiftWeek(-7)">←</button><button class="ghost" onclick="state.weekStart=monday(new Date());render()">Aujourd'hui</button><button class="ghost" onclick="shiftWeek(7)">→</button><b>Semaine du ${days[0].toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}</b><span style="flex:1"></span><button onclick="editEvent()">+ Rendez-vous</button></div>
+<div class="bar">${db.users.map(u=>`<label class="chip"><input type="checkbox" ${state.hiddenUsers.includes(u.id)?'':'checked'} onchange="toggleUser('${u.id}')"><span class="dot" style="background:${u.color}"></span>${esc(u.name)}</label>`).join('')}</div>
+<div class="week">${days.map(d=>{const k=iso(d);return`<div class="day ${k===today?'today':''}" ondblclick="editEvent(null,null,'${k}')"><h4>${d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'short'})}</h4>${vis.filter(e=>e.date===k).sort((a,b)=>(a.start||'').localeCompare(b.start||'')).map(e=>{const u=byId('users',e.userId),c=byId('clients',e.clientId);return`<div class="ev" style="border-color:${u?.color||'#999'}" onclick="event.stopPropagation();editEvent('${e.id}')"><b>${e.start||''}${e.end?'–'+e.end:''}</b> ${esc(e.type)}<br>${esc(e.title)}${c?'<br><i>'+esc(c.name)+'</i>':''}<br><span class="mute">${esc(u?.name)}</span></div>`}).join('')}</div>`}).join('')}</div><p class="mute">Double-cliquez sur un jour pour ajouter un rendez-vous.</p>`}
+function shiftWeek(n){const d=new Date(state.weekStart);d.setDate(d.getDate()+n);state.weekStart=d;render()}
+function toggleUser(id){const h=state.hiddenUsers;state.hiddenUsers=h.includes(id)?h.filter(x=>x!==id):[...h,id];render()}
+
+function vBrands(){const S=curSeason(),m=agg(o=>o.brandId,o=>o.season===S);
+const cl=b=>new Set(db.orders.filter(o=>o.brandId===b.id&&o.season===S&&ok(o)&&+o.amount).map(o=>o.clientId)).size;
+const bs=[...db.brands].sort((a,b)=>(m.get(b.id)||Z).v-(m.get(a.id)||Z).v||a.name.localeCompare(b.name));
+return`<h2>Marques</h2><div class="bar"><button onclick="editBrand()">+ Marque</button>${S?'Saison '+seasonSel("state.season=this.value;render()"):''}</div><div class="card"><table><tr><th>Marque</th><th class="n">Commission</th><th>Contact marque</th><th class="n">Réalisé</th><th class="n">Objectif</th><th class="n">% obj.</th><th class="n">N-1</th><th class="n">Évol.</th><th class="n">Clients</th></tr>${bs.map(b=>{const a=m.get(b.id)||Z;return`<tr class="click" onclick="editBrand('${b.id}')"><td><b>${esc(b.name)}</b></td><td class="n">${b.commission||0} %</td><td>${esc(b.contact)}</td><td class="n">${eur(a.v)}</td><td class="n">${eur(a.obj)}</td><td class="n">${pct(a.v,a.obj)}</td><td class="n">${eur(a.n1)}</td><td class="n">${evo(a.v,a.n1)}</td><td class="n">${cl(b)}</td></tr>`}).join('')}</table></div><p class="mute">Taux de commission à 12 % par défaut : ajustez-les selon vos contrats (cliquez sur une marque).</p>`}
+
+function vTeam(){const t=iso(new Date());return`<h2>Équipe</h2><div class="bar"><button onclick="editUser()">+ Membre</button></div><div class="card"><table><tr><th>Nom</th><th>E-mail</th><th class="n">Lignes de commande</th><th class="n">RDV à venir</th></tr>${db.users.map(u=>`<tr class="click" onclick="editUser('${u.id}')"><td><span class="dot" style="background:${u.color}"></span> ${esc(u.name)}</td><td>${esc(u.email)}</td><td class="n">${db.orders.filter(o=>o.userId===u.id).length}</td><td class="n">${db.events.filter(e=>e.userId===u.id&&e.date>=t).length}</td></tr>`).join('')}</table></div><p class="mute">Les comptes de connexion se créent dans Supabase (Authentication → Users). Renseignez ici le même e-mail pour relier le membre à son compte.</p>`}
+
+function vExport(){return`<h2>Import / Export</h2>
+<div class="card"><h3>Importer depuis Excel</h3><p>Sélectionnez un ou deux fichiers : la <b>liste des contacts</b> (colonnes Nom, Adresse, CP, Ville…, Interlocuteur principal) et/ou le <b>CA détaillé</b> (colonnes Saison, Marque, Nom, Affecté à, Type, Objectif, Réalisé, N-1). Le type de fichier est reconnu automatiquement.</p>
+<p class="mute">Vous pouvez réimporter un fichier mis à jour à tout moment : les clients et les lignes de CA déjà présents sont mis à jour, pas dupliqués. Marques et commerciaux manquants sont créés automatiquement.</p>
+<label style="display:inline-block;background:var(--accent);color:#fff;padding:8px 12px;border-radius:6px;cursor:pointer;font-size:13px">Choisir les fichiers Excel<input type="file" accept=".xlsx,.xls,.csv" multiple style="display:none" onchange="importFiles([...this.files]);this.value=''"></label>
+<div id="implog">${impLog}</div></div>
+<div class="card"><h3>Export Excel</h3><p>Un fichier .xlsx avec un onglet par type de données : clients, commandes, CA par client × marque × saison, CA par marque, CA par commercial, agenda, marques, équipe.</p><button onclick="exportXlsx()">Télécharger l'export Excel</button></div>
+<div class="card"><h3>Sauvegarde complète</h3><p class="mute">Les données sont partagées en ligne avec l'équipe. Une sauvegarde régulière reste conseillée. La restauration remplace les données de toute l'équipe.</p><div class="bar"><button class="ghost" onclick="backup()">Télécharger une sauvegarde (.json)</button><label style="border:1px solid var(--line);padding:8px 12px;border-radius:6px;cursor:pointer;background:#fff;font-size:13px">Restaurer une sauvegarde<input type="file" accept=".json" style="display:none" onchange="restore(this.files[0])"></label></div></div>`}
+
+/* ---------- Import Excel ---------- */
+const num=v=>typeof v==='number'?v:(parseFloat(String(v??'').replace(/\s/g,'').replace(/ /g,'').replace(',','.'))||0);
+const str=v=>String(v??'').trim();
+const zip5=v=>{const s=str(v);return /^\d{4}$/.test(s)?'0'+s:s};
+const BRAND_NAMES={FREEMANTPORTER:'Freeman T. Porter',ISEA:'I-SEA',YETI:'YETI'};
+const nice=s=>BRAND_NAMES[N(s)]||str(s).toLowerCase().replace(/(^|[\s\-.])(\S)/g,(m,a,b)=>a+b.toUpperCase());
+
+function sheetRows(wb){const ws=wb.Sheets[wb.SheetNames[0]];const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+const hi=rows.findIndex((r,i)=>i<15&&r.some(c=>N(c)==='NOM'));if(hi<0)return null;
+const H={};rows[hi].forEach((c,i)=>{const k=N(c);if(k&&H[k]==null)H[k]=i});
+const type=H.SAISON!=null&&H.REALISE!=null?'ca':(H.NOM!=null&&(H.CP!=null||H.INTERLOCUTEURPRINCIPAL!=null||H.VILLE!=null))?'contacts':null;
+return{type,H,rows:rows.slice(hi+1)}}
+
+async function importFiles(files){if(!files.length)return;if(typeof XLSX==='undefined')return alert('Module Excel non chargé (connexion internet requise).');
+impLog='';const log=m=>{impLog+=m+'<br>';const L=document.getElementById('implog');if(L)L.innerHTML=impLog};
+const parsed=[];for(const f of files){try{const p=sheetRows(XLSX.read(await f.arrayBuffer()));if(!p||!p.type){log(`⚠️ <b>${esc(f.name)}</b> : format non reconnu, ignoré.`);continue}p.name=f.name;parsed.push(p)}catch(e){log(`⚠️ <b>${esc(f.name)}</b> : lecture impossible (${esc(e.message)}).`)}}
+parsed.sort((a,b)=>(a.type==='contacts'?0:1)-(b.type==='contacts'?0:1));
+if(!parsed.length)return;
+importing=true;const items=new Map();const put=(k,o)=>items.set(o.id,[k,o]);
+try{
+for(const p of parsed){const g=(r,k)=>p.H[k]!=null?r[p.H[k]]:'';
+if(p.type==='contacts'){const byKey=new Map(db.clients.map(c=>[c.ikey||(N(c.name)+'|'+(c.zip||'')+'|'+N(c.address)),c]));let nw=0,up=0;
+for(const r of p.rows){const name=str(g(r,'NOM'));if(!name)continue;
+const d={name,address:str(g(r,'ADRESSE')),zip:zip5(g(r,'CP')||g(r,'CODEPOSTAL')),city:str(g(r,'VILLE')),country:str(g(r,'PAYS')),sector:str(g(r,'SECTEUR')),email:str(g(r,'EMAIL')||g(r,'EMAIL')),contact:str(g(r,'INTERLOCUTEURPRINCIPAL')||g(r,'CONTACT')),phone:str(g(r,'TELEPHONE')),mobile:str(g(r,'PORTABLE')),hq:str(g(r,'NOMDUSIEGESOCIAL'))};
+d.dept=d.zip.slice(0,2);d.ikey=N(name)+'|'+d.zip+'|'+N(d.address);
+let c=byKey.get(d.ikey);
+if(c){Object.keys(d).forEach(k=>{if(d[k])c[k]=d[k]});up++}else{c={id:uid(),...d,notes:''};db.clients.push(c);byKey.set(d.ikey,c);nw++}
+put('clients',c)}
+log(`✅ <b>${esc(p.name)}</b> : ${nw} clients créés, ${up} mis à jour.`)}
+
+if(p.type==='ca'){
+// Index clients par nom : si plusieurs magasins portent le même nom, on rattache le CA à la fiche la plus complète
+const score=c=>['email','contact','phone','address','mobile'].filter(k=>c[k]).length;
+const byName=new Map(),multi=new Set();
+for(const c of db.clients){const k=N(c.name);const e=byName.get(k);if(e){multi.add(k);if(score(c)>score(e))byName.set(k,c)}else byName.set(k,c)}
+const brandOf=new Map(db.brands.map(b=>[N(b.name),b])),userOf=new Map(db.users.map(u=>[N(u.name),u]));
+const getBrand=raw=>{const k=N(raw);if(!k)return null;let b=brandOf.get(k);if(!b){b={id:uid(),name:nice(raw),commission:12,contact:'',notes:''};db.brands.push(b);brandOf.set(k,b);log(`➕ Marque créée : ${esc(b.name)} (12 % par défaut)`)}put('brands',b);return b};
+const getUser=raw=>{const k=N(raw);if(!k)return null;let u=userOf.get(k);
+if(!u){const first=N(str(raw).split(/\s+/)[0]);u=db.users.find(x=>x.email&&N(x.name)===N(x.email.split('@')[0])&&first.startsWith(N(x.email.split(/[.@]/)[0]))&&N(x.email.split(/[.@]/)[0]).length>=3);
+if(u){log(`✏️ Membre « ${esc(u.name)} » renommé en ${esc(str(raw))}`);u.name=str(raw)}else{u={id:uid(),name:str(raw),email:'',color:COLORS[db.users.length%COLORS.length]};db.users.push(u);log(`➕ Commercial ajouté : ${esc(u.name)}`)}
+userOf.set(k,u)}put('users',u);return u};
+const getClient=raw=>{const k=N(raw);let c=byName.get(k);if(!c){c={id:uid(),name:str(raw),notes:'Créé par l\'import CA (absent de la liste des contacts)',ikey:k+'||'};db.clients.push(c);byName.set(k,c);put('clients',c);log(`➕ Client absent des contacts, créé : ${esc(c.name)}`)}return c};
+// Regroupe les lignes identiques (même saison, marque, client, type, commercial)
+const groups=new Map();
+for(const r of p.rows){const season=str(g(r,'SAISON')).toUpperCase().replace(/\s/g,''),cl=str(g(r,'NOM')),br=str(g(r,'MARQUE'));
+if(!season||!cl||!br||N(g(r,'EQUIPE'))==='TOTAUX')continue;
+const type=str(g(r,'TYPE')).toUpperCase(),usr=str(g(r,'AFFECTEA'));
+const key=[season,N(br),N(cl),type,N(usr)].join('|');
+let a=groups.get(key);if(!a)groups.set(key,a={season,br,cl,type,usr,amount:0,objective:0,n1:0,s1:0});
+a.amount+=num(g(r,'REALISE'));a.objective+=num(g(r,'OBJECTIF'));a.n1+=num(g(r,'N1'));a.s1+=num(g(r,'S1'))}
+const byIkey=new Map(db.orders.filter(o=>o.ikey).map(o=>[o.ikey,o]));let nw=0,up=0;const usedMulti=new Set();
+for(const[key,a]of groups){const b=getBrand(a.br),u=getUser(a.usr),c=getClient(a.cl);if(multi.has(N(a.cl)))usedMulti.add(a.cl);
+const d={clientId:c.id,brandId:b.id,userId:u?.id||'',season:a.season,type:a.type,amount:Math.round(a.amount*100)/100,objective:Math.round(a.objective*100)/100,n1:Math.round(a.n1*100)/100,s1:Math.round(a.s1*100)/100,ikey:key};
+let o=byIkey.get(key);if(o){Object.assign(o,d);up++}else{o={id:uid(),...d,date:seasonDate(a.season),status:'Confirmée',delivery:'',ref:'',notes:''};db.orders.push(o);byIkey.set(key,o);nw++}
+put('orders',o)}
+log(`✅ <b>${esc(p.name)}</b> : ${nw} lignes de CA créées, ${up} mises à jour.`);
+if(usedMulti.size)log(`ℹ️ ${usedMulti.size} enseigne(s) ont plusieurs magasins du même nom dans les contacts ; leur CA est rattaché à la fiche la plus complète : ${[...usedMulti].map(esc).join(', ')}.`)}}
+
+log(`⏳ Enregistrement en ligne de ${items.size} fiches…`);
+const okSave=await putMany([...items.values()],(d,t)=>{const L=document.getElementById('implog');if(L)L.innerHTML=impLog+`${d} / ${t}<br>`});
+log(okSave?'🎉 <b>Import terminé.</b> Allez voir le tableau de bord.':'❌ L\'enregistrement a échoué en cours de route : relancez l\'import, il reprendra sans doublons.');
+}catch(e){log('❌ Erreur : '+esc(e.message))}
+importing=false;state.season='';nav()}
+
+/* ---------- Formulaires ---------- */
+function form(title,fields,val,onSave,onDel){
+document.getElementById('modal').innerHTML=`<div class="modal" onclick="if(event.target===this)closeM()"><div class="box"><h3>${title}</h3><form id="fm">${fields.map(f=>{const v=val[f.k]??'';let inp;
+if(f.t==='select')inp=`<select name="${f.k}">${f.o.map(([ov,ol])=>`<option value="${esc(ov)}" ${String(v)===String(ov)?'selected':''}>${esc(ol)}</option>`).join('')}</select>`;
+else if(f.t==='area')inp=`<textarea name="${f.k}" rows="3">${esc(v)}</textarea>`;
+else inp=`<input name="${f.k}" type="${f.t||'text'}" value="${esc(v)}" ${f.t==='number'?'step="0.01"':''} ${f.req?'required':''}>`;
+return`<div class="f"><label>${f.l}</label>${inp}</div>`}).join('')}
+<div class="bar" style="margin-top:14px"><button type="submit">Enregistrer</button><button type="button" class="ghost" onclick="closeM()">Annuler</button><span style="flex:1"></span>${onDel?'<button type="button" class="del" id="delb">Supprimer</button>':''}</div></form></div></div>`;
+document.getElementById('fm').onsubmit=e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));fields.filter(f=>f.t==='number').forEach(f=>d[f.k]=parseFloat(d[f.k])||0);onSave(d);closeM();render()};
+if(onDel)document.getElementById('delb').onclick=()=>{if(confirm('Supprimer définitivement ?')&&onDel()!==false){closeM();render()}}}
+function closeM(){document.getElementById('modal').innerHTML='';if(pending){pending=false;render()}}
+
+function editClient(id){form(id?'Modifier le client':'Nouveau client',[
+{k:'name',l:'Enseigne *',req:1},{k:'contact',l:'Interlocuteur'},{k:'phone',l:'Téléphone',t:'tel'},{k:'mobile',l:'Portable',t:'tel'},{k:'email',l:'E-mail',t:'email'},{k:'address',l:'Adresse'},{k:'zip',l:'Code postal'},{k:'city',l:'Ville'},{k:'dept',l:'Département (auto depuis le CP si vide)'},{k:'sector',l:'Secteur'},{k:'hq',l:'Siège social'},{k:'siret',l:'SIRET'},{k:'notes',l:'Notes',t:'area'}],
+id?byId('clients',id):{},d=>{d.dept=d.dept||(d.zip||'').slice(0,2);upsert('clients',id,d)},
+id?()=>{if(db.orders.some(o=>o.clientId===id)){alert('Ce client a des commandes : supprimez-les d\'abord.');return false}remove('clients',id);state.view='clients'}:null)}
+
+function editOrder(id,clientId){if(!db.clients.length){alert('Créez d\'abord un client.');return}
+const me_u=db.users.find(u=>u.email===me?.email)||db.users[0];
+form(id?'Modifier la commande':'Nouvelle commande',[
+{k:'clientId',l:'Client',t:'select',o:sortedClients().map(c=>[c.id,c.name+(c.city?' — '+c.city:'')])},
+{k:'brandId',l:'Marque',t:'select',o:[...db.brands].sort((a,b)=>a.name.localeCompare(b.name)).map(b=>[b.id,b.name])},
+{k:'season',l:'Saison * (ex. SS27, FW27)',req:1},
+{k:'type',l:'Type',t:'select',o:[['',''],...TYPES.map(t=>[t,t])]},
+{k:'userId',l:'Commercial',t:'select',o:db.users.map(u=>[u.id,u.name])},
+{k:'amount',l:'Montant réalisé HT (€)',t:'number',req:1},
+{k:'objective',l:'Objectif (€)',t:'number'},
+{k:'n1',l:'N-1 (€) — même saison l\'an dernier',t:'number'},
+{k:'status',l:'Statut',t:'select',o:['Prise','Confirmée','Livrée','Facturée','Annulée'].map(s=>[s,s])},
+{k:'date',l:'Date de commande',t:'date'},
+{k:'delivery',l:'Livraison prévue',t:'date'},
+{k:'ref',l:'N° de commande'},
+{k:'notes',l:'Notes',t:'area'}],
+id?byId('orders',id):{clientId,date:iso(new Date()),status:'Prise',season:state.season,userId:me_u?.id},d=>{d.season=(d.season||'').toUpperCase().replace(/\s/g,'');d.date=d.date||seasonDate(d.season);upsert('orders',id,d)},id?()=>remove('orders',id):null)}
+
+function editEvent(id,clientId,date){
+form(id?'Modifier le rendez-vous':'Nouveau rendez-vous',[
+{k:'title',l:'Objet *',req:1},
+{k:'type',l:'Type',t:'select',o:['RDV client','Présentation collection','Salon','Showroom','Appel','Livraison','Autre'].map(s=>[s,s])},
+{k:'date',l:'Date',t:'date',req:1},{k:'start',l:'Début',t:'time'},{k:'end',l:'Fin',t:'time'},
+{k:'userId',l:'Commercial',t:'select',o:db.users.map(u=>[u.id,u.name])},
+{k:'clientId',l:'Client (optionnel)',t:'select',o:[['','—'],...sortedClients().map(c=>[c.id,c.name+(c.city?' — '+c.city:'')])]},
+{k:'place',l:'Lieu'},
+{k:'report',l:'Compte rendu',t:'area'}],
+id?byId('events',id):{clientId:clientId||'',date:date||iso(new Date()),start:'10:00',end:'11:00',type:'RDV client',userId:(db.users.find(u=>u.email===me?.email)||db.users[0])?.id},
+d=>upsert('events',id,d),id?()=>remove('events',id):null)}
+
+function editBrand(id){form(id?'Modifier la marque':'Nouvelle marque',[{k:'name',l:'Marque *',req:1},{k:'commission',l:'Taux de commission (%)',t:'number'},{k:'contact',l:'Contact marque'},{k:'notes',l:'Notes',t:'area'}],
+id?byId('brands',id):{commission:12},d=>upsert('brands',id,d),
+id?()=>{if(db.orders.some(o=>o.brandId===id)){alert('Cette marque a des commandes.');return false}remove('brands',id)}:null)}
+
+function editUser(id){form(id?'Modifier le membre':'Nouveau membre',[{k:'name',l:'Nom *',req:1},{k:'email',l:'E-mail (le même que son compte de connexion)',t:'email'},{k:'color',l:'Couleur agenda',t:'color'}],
+id?byId('users',id):{color:COLORS[db.users.length%COLORS.length]},d=>upsert('users',id,d),
+id?()=>{if(db.users.length===1){alert('Il faut au moins un membre.');return false}if(db.events.some(e=>e.userId===id)||db.orders.some(o=>o.userId===id)){alert('Ce membre a des rendez-vous ou des commandes.');return false}remove('users',id)}:null)}
+
+/* ---------- Export ---------- */
+function exportXlsx(){if(typeof XLSX==='undefined'){alert('Module Excel non chargé (connexion internet requise).');return}
+const cn=id=>byId('clients',id)?.name||'',bn=id=>byId('brands',id)?.name||'',un=id=>byId('users',id)?.name||'';
+const wb=XLSX.utils.book_new(),add=(name,rows)=>XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.length?rows:[{}]),name);
+const ss=seasons().reverse();
+add('Clients',sortedClients().map(c=>({Enseigne:c.name,Interlocuteur:c.contact,Téléphone:c.phone,Portable:c.mobile,Email:c.email,Adresse:c.address,CP:c.zip,Ville:c.city,Département:c.dept,Secteur:c.sector,'Siège social':c.hq,SIRET:c.siret,Notes:c.notes})));
+add('Commandes',[...db.orders].sort(orderSort).map(o=>({Saison:o.season,Client:cn(o.clientId),Marque:bn(o.brandId),Type:o.type,Commercial:un(o.userId),Statut:o.status,Objectif:+o.objective||0,'Réalisé HT':+o.amount||0,'N-1':+o.n1||0,Commission:Math.round(comm(o)*100)/100,Date:o.date,Livraison:o.delivery,'N° commande':o.ref,Notes:o.notes})));
+const cols=[];db.brands.forEach(b=>ss.forEach(s=>{if(ca(o=>o.brandId===b.id&&o.season===s))cols.push([b,s])}));
+const pc=agg(o=>o.clientId+'|'+o.brandId+'|'+o.season,()=>true),pt=agg(o=>o.clientId+'|'+o.season,()=>true);
+add('CA par client',sortedClients().filter(c=>db.orders.some(o=>o.clientId===c.id)).map(c=>{const r={Client:c.name,Ville:c.city,Dépt:c.dept};cols.forEach(([b,s])=>r[`${b.name} ${s}`]=(pc.get(c.id+'|'+b.id+'|'+s)||Z).v);ss.forEach(s=>r[`TOTAL ${s}`]=(pt.get(c.id+'|'+s)||Z).v);return r}));
+const ps=(keyFn,list,label)=>{const m=agg(o=>keyFn(o)+'|'+o.season,()=>true);return list.map(([id,name,extra])=>{const r={[label]:name,...extra};ss.forEach(s=>{const a=m.get(id+'|'+s)||Z;r[`Réalisé ${s}`]=a.v;r[`Objectif ${s}`]=a.obj;r[`N-1 ${s}`]=a.n1;r[`Commission ${s}`]=Math.round(a.c)});return r})};
+add('CA par marque',ps(o=>o.brandId,db.brands.map(b=>[b.id,b.name,{'Commission %':b.commission}]),'Marque'));
+add('CA par commercial',ps(o=>o.userId||'',[...db.users.map(u=>[u.id,u.name,{}]),['','Non affecté',{}]],'Commercial'));
+add('Agenda',[...db.events].sort((a,b)=>(a.date+(a.start||'')).localeCompare(b.date+(b.start||''))).map(e=>({Date:e.date,Début:e.start,Fin:e.end,Type:e.type,Objet:e.title,Commercial:un(e.userId),Client:cn(e.clientId),Lieu:e.place,'Compte rendu':e.report})));
+add('Marques',db.brands.map(b=>({Marque:b.name,'Commission %':b.commission,Contact:b.contact,Notes:b.notes})));
+add('Équipe',db.users.map(u=>({Nom:u.name,Email:u.email})));
+XLSX.writeFile(wb,`CRM_Meyaclo_export_${iso(new Date())}.xlsx`)}
+
+function backup(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(db,null,1)],{type:'application/json'}));a.download=`CRM_sauvegarde_${iso(new Date())}.json`;a.click()}
+function restore(f){if(!f)return;const r=new FileReader();r.onload=async()=>{let d;try{d=JSON.parse(r.result);if(!d.clients||!d.orders)throw 0}catch(e){return alert('Fichier invalide.')}
+if(!confirm('Remplacer TOUTES les données de l\'équipe par cette sauvegarde ?'))return;
+const{error}=await sb.from('records').delete().neq('id','');if(error)return alert('Erreur : '+error.message);
+if(await putMany(KINDS.flatMap(k=>(d[k]||[]).map(o=>[k,o])))){db={brands:d.brands||[],users:d.users||[],clients:d.clients,orders:d.orders,events:d.events||[]};render();alert('Sauvegarde restaurée.')}};r.readAsText(f)}
+
+sb.auth.onAuthStateChange(ev=>{if(ev==='SIGNED_OUT')location.reload()});
+start();
+</script>
+</body>
+</html>
