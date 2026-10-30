@@ -6,6 +6,7 @@
 <title>CRM Meyaclo</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 :root{--bg:#f5f6f8;--card:#fff;--ink:#1d2433;--mute:#6b7385;--line:#e3e6ec;--accent:#0f6e8c;--accent2:#e8f3f7;--danger:#c0392b}
 *{box-sizing:border-box}
@@ -49,6 +50,8 @@ input,select,textarea{border:1px solid var(--line);border-radius:6px;padding:7px
 .f{display:flex;flex-direction:column;margin-bottom:10px}
 .f label{font-size:12px;color:var(--mute);margin-bottom:3px}
 .mute{color:var(--mute)}
+.gcal{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:6px;padding:4px 8px;background:#fff}
+#toast{position:fixed;bottom:18px;right:18px;background:#152238;color:#fff;padding:10px 14px;border-radius:8px;font-size:13px;z-index:20;display:none;max-width:340px}
 #implog{font-size:13px;margin-top:10px;line-height:1.5}
 @media(max-width:800px){body{flex-direction:column}nav{width:100%;display:flex;overflow-x:auto;padding:0}nav h1{display:none}.who{border:0;margin:0;padding:10px 18px}.grid2{grid-template-columns:1fr}.week{grid-template-columns:1fr}.day{min-height:auto}}
 </style>
@@ -57,10 +60,13 @@ input,select,textarea{border:1px solid var(--line);border-radius:6px;padding:7px
 <nav id="nav" style="display:none"></nav>
 <main id="app"><p class="mute">Chargement…</p></main>
 <div id="modal"></div>
+<div id="toast"></div>
 <script>
 // ======================= CONFIGURATION =======================
 const SUPABASE_URL = 'https://ramwufwyvdsnfeepqoio.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_BOnwcJ78GLGk7F4L1dFgxg_4Zf0zFqC';
+// ID client OAuth Google (Google Cloud Console → Identifiants). Laisser vide = synchro Google Agenda désactivée.
+const GOOGLE_CLIENT_ID = '';
 // =============================================================
 
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
@@ -75,6 +81,7 @@ const N=s=>String(s??'').normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase().r
 const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const fmtDate=d=>d?new Date(d+'T00:00').toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short',year:'2-digit'}):'';
 function monday(d){d=new Date(d);d.setDate(d.getDate()-(d.getDay()+6)%7);d.setHours(0,0,0,0);return d}
+function toast(m){const t=document.getElementById('toast');t.innerHTML=m;t.style.display='block';clearTimeout(window._to);window._to=setTimeout(()=>t.style.display='none',4500)}
 
 /* ---------- Saisons (SS27 = printemps-été 2027, FW26 = automne-hiver 2026 ; PE/AH acceptés) ---------- */
 const SRX=/^(SS|FW|PE|AH)(\d{2})$/;
@@ -89,6 +96,7 @@ const byId=(arr,id)=>db[arr].find(x=>x.id===id);
 const yearOf=o=>+(o.date||'').slice(0,4);
 const CUR=new Date().getFullYear();
 const sortedClients=()=>[...db.clients].sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+const myUser=()=>db.users.find(u=>u.email&&N(u.email)===N(me?.email))||db.users[0];
 let state={view:'dash',mode:'season',season:'',clientId:null,year:CUR,weekStart:monday(new Date()),hiddenUsers:[],q:'',fActive:'',fBrand:'',fClient:'',fSeason:'',fUser:'',fType:''};
 
 /* ---------- Connexion & synchronisation Supabase ---------- */
@@ -116,8 +124,60 @@ refresh()}).subscribe()}
 function refresh(){clearTimeout(window._rf);window._rf=setTimeout(()=>{if(importing||document.getElementById('modal').innerHTML||document.activeElement?.id==='q'){pending=true;return}render()},300)}
 async function logout(){await sb.auth.signOut();location.reload()}
 
-function upsert(arr,id,d){let o;if(id){o=byId(arr,id);Object.assign(o,d)}else{o={id:uid(),...d};db[arr].push(o)}putMany([[arr,o]])}
+function upsert(arr,id,d){let o;if(id){o=byId(arr,id);Object.assign(o,d)}else{o={id:uid(),...d};db[arr].push(o)}putMany([[arr,o]]);return o}
 function remove(arr,id){db[arr]=db[arr].filter(x=>x.id!==id);sb.from('records').delete().eq('id',id).then(({error})=>{if(error)alert('Erreur de suppression : '+error.message)})}
+
+/* ---------- Google Agenda ----------
+   Chaque membre connecte SON compte Google (bouton dans l'Agenda).
+   Un RDV créé/modifié dans le CRM est écrit dans l'agenda Google de la personne qui l'a créé ;
+   si le RDV est affecté à un autre commercial, celui-ci reçoit une invitation (il le voit donc aussi dans son agenda). */
+const GSCOPE='https://www.googleapis.com/auth/calendar.events';
+const GAPI='https://www.googleapis.com/calendar/v3/calendars/primary/events';
+let gTok=null,gClient=null;
+try{gTok=JSON.parse(localStorage.getItem('gtok')||'null')}catch(e){}
+const gValid=()=>gTok&&gTok.exp>Date.now()+60000;
+const gWanted=()=>{try{return !!GOOGLE_CLIENT_ID&&localStorage.getItem('gcal')==='1'}catch(e){return false}};
+function gInit(){if(!gClient&&GOOGLE_CLIENT_ID&&window.google?.accounts?.oauth2)gClient=google.accounts.oauth2.initTokenClient({client_id:GOOGLE_CLIENT_ID,scope:GSCOPE,callback:()=>{}});return gClient}
+// À appeler directement depuis un clic (sinon le navigateur bloque la fenêtre Google)
+function gToken(interactive){return new Promise((res,rej)=>{if(gValid())return res(gTok.t);const c=gInit();if(!c)return rej(new Error('Module Google non chargé'));
+c.callback=r=>{if(r.error)return rej(new Error(r.error));gTok={t:r.access_token,exp:Date.now()+(+r.expires_in||3600)*1000};try{localStorage.setItem('gtok',JSON.stringify(gTok));localStorage.setItem('gcal','1')}catch(e){}res(gTok.t)};
+c.error_callback=e=>rej(new Error(e?.type||'fenêtre fermée'));
+c.requestAccessToken({prompt:interactive?'consent':'',hint:me?.email})})}
+async function gFetch(t,url,method,body){const r=await fetch(url,{method,headers:{Authorization:'Bearer '+t,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
+if(r.status===401){gTok=null;try{localStorage.removeItem('gtok')}catch(e){}}return r}
+const addH=h=>{const[a,b]=h.split(':').map(Number);const m=Math.min(a*60+b+60,1439);return`${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`};
+const nextDay=d=>{const x=new Date(d+'T00:00');x.setDate(x.getDate()+1);return iso(x)};
+function gBody(e){const u=byId('users',e.userId),c=byId('clients',e.clientId),tz=Intl.DateTimeFormat().resolvedOptions().timeZone||'Europe/Paris';
+const dt=(d,h)=>({dateTime:`${d}T${h}:00`,timeZone:tz});
+const b={summary:`${e.type?e.type+' · ':''}${e.title}${c?' — '+c.name:''}`,
+location:e.place||(c?[c.address,c.zip,c.city].filter(Boolean).join(' '):''),
+description:[c&&('Client : '+c.name),c?.contact&&('Contact : '+c.contact),(c?.phone||c?.mobile)&&('Tél : '+(c.phone||c.mobile)),u&&('Commercial : '+u.name),e.report&&('\nCompte rendu :\n'+e.report),'\n— Créé depuis le CRM Meyaclo'].filter(Boolean).join('\n'),
+extendedProperties:{private:{crmId:e.id}}};
+if(e.start){b.start=dt(e.date,e.start);b.end=dt(e.date,e.end&&e.end>e.start?e.end:addH(e.start))}else{b.start={date:e.date};b.end={date:nextDay(e.date)}}
+if(u?.email&&N(u.email)!==N(me?.email))b.attendees=[{email:u.email}];
+return b}
+async function gPush(e){if(!gWanted()||!e)return;
+if(e.gcalOwner&&N(e.gcalOwner)!==N(me?.email))return; // RDV créé par un collègue : il reste dans son agenda à lui
+let t;try{t=await gToken(false)}catch(err){toast('Google Agenda : reconnectez-vous (bouton dans l\'Agenda).');return}
+try{let r;
+if(e.gcalId){r=await gFetch(t,`${GAPI}/${encodeURIComponent(e.gcalId)}?sendUpdates=all`,'PUT',gBody(e));if(r.status===404||r.status===410)r=null}
+if(!r)r=await gFetch(t,`${GAPI}?sendUpdates=all`,'POST',gBody(e));
+if(!r.ok)throw new Error((await r.json().catch(()=>({})))?.error?.message||r.status);
+const j=await r.json();if(e.gcalId!==j.id||!e.gcalOwner){e.gcalId=j.id;e.gcalOwner=me.email;await putMany([['events',e]])}
+toast('📅 RDV envoyé dans Google Agenda');return true}
+catch(err){toast('Google Agenda : échec de l\'envoi ('+esc(err.message)+')');return false}}
+async function gDel(e){if(!gWanted()||!e?.gcalId||N(e.gcalOwner)!==N(me?.email))return;
+try{const t=await gToken(false);await gFetch(t,`${GAPI}/${encodeURIComponent(e.gcalId)}?sendUpdates=all`,'DELETE');toast('📅 RDV retiré de Google Agenda')}catch(err){toast('Google Agenda : RDV non supprimé, faites-le à la main.')}}
+function gConnect(){gToken(true).then(()=>{toast('✅ Google Agenda connecté');render()}).catch(e=>alert('Connexion Google impossible : '+e.message))}
+function gDisconnect(){try{if(gTok&&window.google?.accounts?.oauth2)google.accounts.oauth2.revoke(gTok.t,()=>{});localStorage.removeItem('gtok');localStorage.removeItem('gcal')}catch(e){}gTok=null;toast('Google Agenda déconnecté');render()}
+async function gSyncAll(){const today=iso(new Date()),u=myUser();
+const list=db.events.filter(e=>e.date>=today&&!e.gcalId&&(e.userId===u?.id));
+if(!list.length)return toast('Tous vos RDV à venir sont déjà dans Google Agenda.');
+try{await gToken(false)}catch(e){return toast('Google Agenda : reconnectez-vous.')}
+let n=0;for(const e of list)if(await gPush(e))n++;toast(`📅 ${n} / ${list.length} RDV envoyés dans Google Agenda`);render()}
+function gBar(){if(!GOOGLE_CLIENT_ID)return'<span class="mute">Google Agenda : non configuré</span>';
+return gWanted()?`<span class="gcal"><span class="up">●</span> Google Agenda connecté <button class="ghost" onclick="gSyncAll()">Envoyer mes RDV à venir</button><button class="ghost" onclick="gDisconnect()">Déconnecter</button></span>`
+:`<button class="ghost" onclick="gConnect()">📅 Connecter mon Google Agenda</button>`}
 
 /* ---------- Calculs ---------- */
 const ok=o=>o.status!=='Annulée';
@@ -136,7 +196,7 @@ function nav(){document.getElementById('nav').innerHTML='<h1>CRM Meyaclo</h1>'+V
 function go(v,extra){Object.assign(state,{view:v},extra||{});render()}
 function render(){nav();const V={dash:vDash,clients:vClients,client:vClient,orders:vOrders,agenda:vAgenda,brands:vBrands,team:vTeam,export:vExport};document.getElementById('app').innerHTML=V[state.view]()}
 
-function evLine(e){const u=byId('users',e.userId),c=byId('clients',e.clientId);return`<div class="ev" style="border-color:${u?.color||'#999'}" onclick="editEvent('${e.id}')"><b>${fmtDate(e.date)} ${e.start||''}</b> · ${esc(e.type)} · ${esc(e.title)}${c?' — '+esc(c.name):''} <span class="mute">(${esc(u?.name)})</span>${e.report?'<br><span class="mute">'+esc(e.report)+'</span>':''}</div>`}
+function evLine(e){const u=byId('users',e.userId),c=byId('clients',e.clientId);return`<div class="ev" style="border-color:${u?.color||'#999'}" onclick="editEvent('${e.id}')"><b>${fmtDate(e.date)} ${e.start||''}</b> · ${esc(e.type)} · ${esc(e.title)}${c?' — '+esc(c.name):''} <span class="mute">(${esc(u?.name)})</span>${e.gcalId?' 📅':''}${e.report?'<br><span class="mute">'+esc(e.report)+'</span>':''}</div>`}
 const seasonSel=(onch)=>`<select onchange="${onch}">${seasons().map(s=>`<option ${s===state.season?'selected':''}>${s}</option>`).join('')}</select>`;
 
 /* ---------- Vues ---------- */
@@ -216,9 +276,9 @@ return`<h2>Commandes</h2><div class="bar">${sel('fSeason',ss.map(s=>[s,s]),'Tout
 
 function vAgenda(){const ws=state.weekStart,days=[...Array(7)].map((_,i)=>{const d=new Date(ws);d.setDate(d.getDate()+i);return d}),today=iso(new Date());
 const vis=db.events.filter(e=>!state.hiddenUsers.includes(e.userId));
-return`<h2>Agenda équipe</h2><div class="bar"><button class="ghost" onclick="shiftWeek(-7)">←</button><button class="ghost" onclick="state.weekStart=monday(new Date());render()">Aujourd'hui</button><button class="ghost" onclick="shiftWeek(7)">→</button><b>Semaine du ${days[0].toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}</b><span style="flex:1"></span><button onclick="editEvent()">+ Rendez-vous</button></div>
+return`<h2>Agenda équipe</h2><div class="bar"><button class="ghost" onclick="shiftWeek(-7)">←</button><button class="ghost" onclick="state.weekStart=monday(new Date());render()">Aujourd'hui</button><button class="ghost" onclick="shiftWeek(7)">→</button><b>Semaine du ${days[0].toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}</b><span style="flex:1"></span>${gBar()}<button onclick="editEvent()">+ Rendez-vous</button></div>
 <div class="bar">${db.users.map(u=>`<label class="chip"><input type="checkbox" ${state.hiddenUsers.includes(u.id)?'':'checked'} onchange="toggleUser('${u.id}')"><span class="dot" style="background:${u.color}"></span>${esc(u.name)}</label>`).join('')}</div>
-<div class="week">${days.map(d=>{const k=iso(d);return`<div class="day ${k===today?'today':''}" ondblclick="editEvent(null,null,'${k}')"><h4>${d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'short'})}</h4>${vis.filter(e=>e.date===k).sort((a,b)=>(a.start||'').localeCompare(b.start||'')).map(e=>{const u=byId('users',e.userId),c=byId('clients',e.clientId);return`<div class="ev" style="border-color:${u?.color||'#999'}" onclick="event.stopPropagation();editEvent('${e.id}')"><b>${e.start||''}${e.end?'–'+e.end:''}</b> ${esc(e.type)}<br>${esc(e.title)}${c?'<br><i>'+esc(c.name)+'</i>':''}<br><span class="mute">${esc(u?.name)}</span></div>`}).join('')}</div>`}).join('')}</div><p class="mute">Double-cliquez sur un jour pour ajouter un rendez-vous.</p>`}
+<div class="week">${days.map(d=>{const k=iso(d);return`<div class="day ${k===today?'today':''}" ondblclick="editEvent(null,null,'${k}')"><h4>${d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'short'})}</h4>${vis.filter(e=>e.date===k).sort((a,b)=>(a.start||'').localeCompare(b.start||'')).map(e=>{const u=byId('users',e.userId),c=byId('clients',e.clientId);return`<div class="ev" style="border-color:${u?.color||'#999'}" onclick="event.stopPropagation();editEvent('${e.id}')"><b>${e.start||''}${e.end?'–'+e.end:''}</b> ${esc(e.type)}${e.gcalId?' 📅':''}<br>${esc(e.title)}${c?'<br><i>'+esc(c.name)+'</i>':''}<br><span class="mute">${esc(u?.name)}</span></div>`}).join('')}</div>`}).join('')}</div><p class="mute">Double-cliquez sur un jour pour ajouter un rendez-vous. 📅 = présent dans Google Agenda. Pour qu'un collègue reçoive l'invitation, renseignez son e-mail Gmail dans Équipe.</p>`}
 function shiftWeek(n){const d=new Date(state.weekStart);d.setDate(d.getDate()+n);state.weekStart=d;render()}
 function toggleUser(id){const h=state.hiddenUsers;state.hiddenUsers=h.includes(id)?h.filter(x=>x!==id):[...h,id];render()}
 
@@ -227,7 +287,7 @@ const cl=b=>new Set(db.orders.filter(o=>o.brandId===b.id&&o.season===S&&ok(o)&&+
 const bs=[...db.brands].sort((a,b)=>(m.get(b.id)||Z).v-(m.get(a.id)||Z).v||a.name.localeCompare(b.name));
 return`<h2>Marques</h2><div class="bar"><button onclick="editBrand()">+ Marque</button>${S?'Saison '+seasonSel("state.season=this.value;render()"):''}</div><div class="card"><table><tr><th>Marque</th><th class="n">Commission</th><th>Contact marque</th><th class="n">Réalisé</th><th class="n">Objectif</th><th class="n">% obj.</th><th class="n">N-1</th><th class="n">Évol.</th><th class="n">Clients</th></tr>${bs.map(b=>{const a=m.get(b.id)||Z;return`<tr class="click" onclick="editBrand('${b.id}')"><td><b>${esc(b.name)}</b></td><td class="n">${b.commission||0} %</td><td>${esc(b.contact)}</td><td class="n">${eur(a.v)}</td><td class="n">${eur(a.obj)}</td><td class="n">${pct(a.v,a.obj)}</td><td class="n">${eur(a.n1)}</td><td class="n">${evo(a.v,a.n1)}</td><td class="n">${cl(b)}</td></tr>`}).join('')}</table></div><p class="mute">Taux de commission à 12 % par défaut : ajustez-les selon vos contrats (cliquez sur une marque).</p>`}
 
-function vTeam(){const t=iso(new Date());return`<h2>Équipe</h2><div class="bar"><button onclick="editUser()">+ Membre</button></div><div class="card"><table><tr><th>Nom</th><th>E-mail</th><th class="n">Lignes de commande</th><th class="n">RDV à venir</th></tr>${db.users.map(u=>`<tr class="click" onclick="editUser('${u.id}')"><td><span class="dot" style="background:${u.color}"></span> ${esc(u.name)}</td><td>${esc(u.email)}</td><td class="n">${db.orders.filter(o=>o.userId===u.id).length}</td><td class="n">${db.events.filter(e=>e.userId===u.id&&e.date>=t).length}</td></tr>`).join('')}</table></div><p class="mute">Les comptes de connexion se créent dans Supabase (Authentication → Users). Renseignez ici le même e-mail pour relier le membre à son compte.</p>`}
+function vTeam(){const t=iso(new Date());return`<h2>Équipe</h2><div class="bar"><button onclick="editUser()">+ Membre</button></div><div class="card"><table><tr><th>Nom</th><th>E-mail</th><th class="n">Lignes de commande</th><th class="n">RDV à venir</th></tr>${db.users.map(u=>`<tr class="click" onclick="editUser('${u.id}')"><td><span class="dot" style="background:${u.color}"></span> ${esc(u.name)}</td><td>${esc(u.email)}</td><td class="n">${db.orders.filter(o=>o.userId===u.id).length}</td><td class="n">${db.events.filter(e=>e.userId===u.id&&e.date>=t).length}</td></tr>`).join('')}</table></div><p class="mute">Les comptes de connexion se créent dans Supabase (Authentication → Users). Renseignez ici le même e-mail pour relier le membre à son compte. Cet e-mail sert aussi à envoyer les invitations Google Agenda.</p>`}
 
 function vExport(){return`<h2>Import / Export</h2>
 <div class="card"><h3>Importer depuis Excel</h3><p>Sélectionnez un ou deux fichiers : la <b>liste des contacts</b> (colonnes Nom, Adresse, CP, Ville…, Interlocuteur principal) et/ou le <b>CA détaillé</b> (colonnes Saison, Marque, Nom, Affecté à, Type, Objectif, Réalisé, N-1). Le type de fichier est reconnu automatiquement.</p>
@@ -238,7 +298,7 @@ function vExport(){return`<h2>Import / Export</h2>
 <div class="card"><h3>Sauvegarde complète</h3><p class="mute">Les données sont partagées en ligne avec l'équipe. Une sauvegarde régulière reste conseillée. La restauration remplace les données de toute l'équipe.</p><div class="bar"><button class="ghost" onclick="backup()">Télécharger une sauvegarde (.json)</button><label style="border:1px solid var(--line);padding:8px 12px;border-radius:6px;cursor:pointer;background:#fff;font-size:13px">Restaurer une sauvegarde<input type="file" accept=".json" style="display:none" onchange="restore(this.files[0])"></label></div></div>`}
 
 /* ---------- Import Excel ---------- */
-const num=v=>typeof v==='number'?v:(parseFloat(String(v??'').replace(/\s/g,'').replace(/ /g,'').replace(',','.'))||0);
+const num=v=>typeof v==='number'?v:(parseFloat(String(v??'').replace(/\s/g,'').replace(/[  ]/g,'').replace(',','.'))||0);
 const str=v=>String(v??'').trim();
 const zip5=v=>{const s=str(v);return /^\d{4}$/.test(s)?'0'+s:s};
 const BRAND_NAMES={FREEMANTPORTER:'Freeman T. Porter',ISEA:'I-SEA',YETI:'YETI'};
@@ -302,12 +362,12 @@ log(okSave?'🎉 <b>Import terminé.</b> Allez voir le tableau de bord.':'❌ L\
 importing=false;state.season='';nav()}
 
 /* ---------- Formulaires ---------- */
-function form(title,fields,val,onSave,onDel){
+function form(title,fields,val,onSave,onDel,extra){
 document.getElementById('modal').innerHTML=`<div class="modal" onclick="if(event.target===this)closeM()"><div class="box"><h3>${title}</h3><form id="fm">${fields.map(f=>{const v=val[f.k]??'';let inp;
 if(f.t==='select')inp=`<select name="${f.k}">${f.o.map(([ov,ol])=>`<option value="${esc(ov)}" ${String(v)===String(ov)?'selected':''}>${esc(ol)}</option>`).join('')}</select>`;
 else if(f.t==='area')inp=`<textarea name="${f.k}" rows="3">${esc(v)}</textarea>`;
 else inp=`<input name="${f.k}" type="${f.t||'text'}" value="${esc(v)}" ${f.t==='number'?'step="0.01"':''} ${f.req?'required':''}>`;
-return`<div class="f"><label>${f.l}</label>${inp}</div>`}).join('')}
+return`<div class="f"><label>${f.l}</label>${inp}</div>`}).join('')}${extra||''}
 <div class="bar" style="margin-top:14px"><button type="submit">Enregistrer</button><button type="button" class="ghost" onclick="closeM()">Annuler</button><span style="flex:1"></span>${onDel?'<button type="button" class="del" id="delb">Supprimer</button>':''}</div></form></div></div>`;
 document.getElementById('fm').onsubmit=e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));fields.filter(f=>f.t==='number').forEach(f=>d[f.k]=parseFloat(d[f.k])||0);onSave(d);closeM();render()};
 if(onDel)document.getElementById('delb').onclick=()=>{if(confirm('Supprimer définitivement ?')&&onDel()!==false){closeM();render()}}}
@@ -319,7 +379,7 @@ id?byId('clients',id):{},d=>{d.dept=d.dept||(d.zip||'').slice(0,2);upsert('clien
 id?()=>{if(db.orders.some(o=>o.clientId===id)){alert('Ce client a des commandes : supprimez-les d\'abord.');return false}remove('clients',id);state.view='clients'}:null)}
 
 function editOrder(id,clientId){if(!db.clients.length){alert('Créez d\'abord un client.');return}
-const me_u=db.users.find(u=>u.email===me?.email)||db.users[0];
+const me_u=myUser();
 form(id?'Modifier la commande':'Nouvelle commande',[
 {k:'clientId',l:'Client',t:'select',o:sortedClients().map(c=>[c.id,c.name+(c.city?' — '+c.city:'')])},
 {k:'brandId',l:'Marque',t:'select',o:[...db.brands].sort((a,b)=>a.name.localeCompare(b.name)).map(b=>[b.id,b.name])},
@@ -337,6 +397,11 @@ form(id?'Modifier la commande':'Nouvelle commande',[
 id?byId('orders',id):{clientId,date:iso(new Date()),status:'Prise',season:state.season,userId:me_u?.id},d=>{d.season=(d.season||'').toUpperCase().replace(/\s/g,'');d.date=d.date||seasonDate(d.season);upsert('orders',id,d)},id?()=>remove('orders',id):null)}
 
 function editEvent(id,clientId,date){
+const ev=id?byId('events',id):null;
+let gInfo='';
+if(GOOGLE_CLIENT_ID){if(!gWanted())gInfo='<p class="mute">📅 Connectez votre Google Agenda (bouton dans l\'Agenda) pour que ce RDV y apparaisse automatiquement.</p>';
+else if(ev?.gcalOwner&&N(ev.gcalOwner)!==N(me?.email))gInfo=`<p class="mute">📅 Ce RDV est dans l'agenda Google de ${esc(ev.gcalOwner)} : ses modifications Google se font de son côté.</p>`;
+else gInfo='<p class="mute">📅 Sera enregistré dans votre Google Agenda (le commercial affecté reçoit une invitation).</p>'}
 form(id?'Modifier le rendez-vous':'Nouveau rendez-vous',[
 {k:'title',l:'Objet *',req:1},
 {k:'type',l:'Type',t:'select',o:['RDV client','Présentation collection','Salon','Showroom','Appel','Livraison','Autre'].map(s=>[s,s])},
@@ -345,8 +410,9 @@ form(id?'Modifier le rendez-vous':'Nouveau rendez-vous',[
 {k:'clientId',l:'Client (optionnel)',t:'select',o:[['','—'],...sortedClients().map(c=>[c.id,c.name+(c.city?' — '+c.city:'')])]},
 {k:'place',l:'Lieu'},
 {k:'report',l:'Compte rendu',t:'area'}],
-id?byId('events',id):{clientId:clientId||'',date:date||iso(new Date()),start:'10:00',end:'11:00',type:'RDV client',userId:(db.users.find(u=>u.email===me?.email)||db.users[0])?.id},
-d=>upsert('events',id,d),id?()=>remove('events',id):null)}
+ev||{clientId:clientId||'',date:date||iso(new Date()),start:'10:00',end:'11:00',type:'RDV client',userId:myUser()?.id},
+d=>{const o=upsert('events',id,d);gPush(o)},
+id?()=>{gDel(byId('events',id));remove('events',id)}:null,gInfo)}
 
 function editBrand(id){form(id?'Modifier la marque':'Nouvelle marque',[{k:'name',l:'Marque *',req:1},{k:'commission',l:'Taux de commission (%)',t:'number'},{k:'contact',l:'Contact marque'},{k:'notes',l:'Notes',t:'area'}],
 id?byId('brands',id):{commission:12},d=>upsert('brands',id,d),
