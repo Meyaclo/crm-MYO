@@ -110,6 +110,13 @@ input,select,textarea{border:1px solid var(--line);border-radius:6px;padding:7px
 .m-ev.ad{display:block}.m-ev.ad:hover{background:inherit;filter:brightness(.95)}
 .m-more{font-size:12px;font-weight:500;padding:1px 6px;border-radius:4px}.m-more:hover{background:#f1f3f4}
 @media(max-width:800px){.cal{grid-template-columns:minmax(0,1fr);height:calc(100vh - 100px)}.cal-side{display:none}.cal-top{padding:6px}.cal-top h2{font-size:16px;margin-left:4px}.cal-today{padding:6px 10px;margin-right:2px}}
+.modal .box.peek{width:min(440px,94vw);padding:10px 14px 18px}
+.peek-tools{display:flex;justify-content:flex-end;gap:2px;margin-bottom:4px}
+.peek-tools button{background:none;color:#5f6368;width:36px;height:36px;border-radius:50%;padding:0;font-size:17px}.peek-tools button:hover{background:#f1f3f4}
+.peek-row{display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:start;margin:10px 0;font-size:14px;color:#3c4043}
+.peek-row>i{font-style:normal;text-align:center;color:#5f6368}.peek-sq{width:14px;height:14px;border-radius:4px;display:inline-block;margin-top:6px}
+.peek h3{margin:0;font-size:22px;font-weight:400}.peek .mute{font-size:13px}
+.peek-client{display:inline-block;margin-top:6px;background:#e8f0fe;color:#1a73e8;border-radius:16px;padding:6px 14px;font-weight:500}.peek-client:hover{background:#d2e3fc}
 @media(max-width:800px){body{flex-direction:column}nav{width:100%;display:flex;overflow-x:auto;padding:0}nav h1{display:none}.who{border:0;margin:0;padding:10px 18px}.grid2{grid-template-columns:1fr}.week{grid-template-columns:1fr}.day{min-height:auto}}
 </style>
 </head>
@@ -325,12 +332,12 @@ function curSeason(){const ss=seasons();if(!ss.includes(state.season))state.seas
 
 /* ---------- Navigation ---------- */
 const VIEWS=[['dash','Tableau de bord'],['clients','Clients'],['orders','Commandes'],['agenda','Agenda'],['brands','Marques'],['team','Équipe'],['export','Import / Export']];
-function nav(){document.getElementById('nav').innerHTML='<h1>CRM Meyaclo</h1>'+VIEWS.map(([k,l])=>`<a class="${state.view===k||(k==='clients'&&state.view==='client')?'on':''}" onclick="go('${k}')">${l}</a>`).join('')+`<div class="who">${esc(me?.email)}<br><a onclick="logout()" style="padding:6px 0">Déconnexion</a></div>`}
+function nav(){document.getElementById('nav').innerHTML='<h1>CRM Meyaclo</h1>'+VIEWS.map(([k,l])=>`<a class="${state.view===k||(k==='clients'&&state.view==='client')?'on':''}" onclick="go('${k}',{from:''})">${l}</a>`).join('')+`<div class="who">${esc(me?.email)}<br><a onclick="logout()" style="padding:6px 0">Déconnexion</a></div>`}
 function go(v,extra){Object.assign(state,{view:v},extra||{});render()}
 function render(){nav();const V={dash:vDash,clients:vClients,client:vClient,orders:vOrders,agenda:vAgenda,brands:vBrands,team:vTeam,export:vExport};document.getElementById('app').innerHTML=V[state.view]();
 if(state.view==='agenda'){const b=document.getElementById('tgb');if(b)b.scrollTop=state.calScroll??7*HOUR}}
 
-function evLine(e){const u=byId('users',e.userId),c=byId('clients',e.clientId);return`<div class="ev" style="border-color:${u?.color||'#999'}" onclick="editEvent('${e.id}')"><b>${fmtDate(e.date)} ${e.start||''}</b> · ${esc(e.type)} · ${esc(e.title)}${c?' — '+esc(c.name):''} <span class="mute">(${esc(u?.name)})</span>${e.gcalId?' 📅':''}${e.report?'<br><span class="mute">'+esc(e.report)+'</span>':''}</div>`}
+function evLine(e){const u=byId('users',e.userId),c=byId('clients',e.clientId);return`<div class="ev" style="border-color:${u?.color||'#999'}" onclick="evPeek('${e.id}')"><b>${fmtDate(e.date)} ${e.start||''}</b> · ${esc(e.type)} · ${esc(e.title)}${c?' — '+esc(c.name):''} <span class="mute">(${esc(u?.name)})</span>${e.gcalId?' 📅':''}${e.report?'<br><span class="mute">'+esc(e.report)+'</span>':''}</div>`}
 const seasonSel=(onch)=>`<select onchange="${onch}">${seasons().map(s=>`<option ${s===state.season?'selected':''}>${s}</option>`).join('')}</select>`;
 
 /* ---------- Vues ---------- */
@@ -393,7 +400,7 @@ const os=db.orders.filter(o=>o.clientId===c.id).sort(orderSort);
 const ss=[...new Set(os.map(o=>o.season).filter(Boolean))].sort((a,b)=>sVal(b)-sVal(a)).slice(0,5);
 const bs=db.brands.filter(b=>os.some(o=>o.brandId===b.id));
 const evs=db.events.filter(e=>e.clientId===c.id).sort((a,b)=>b.date.localeCompare(a.date));
-return`<div class="bar"><button class="ghost" onclick="go('clients')">← Clients</button><h2 style="margin:0;flex:1">${esc(c.name)}</h2><button onclick="editOrder(null,'${c.id}')">+ Commande</button><button onclick="editEvent(null,'${c.id}')">+ RDV</button><button class="ghost" onclick="editClient('${c.id}')">Modifier</button></div>
+return`<div class="bar">${state.from==='agenda'?`<button class="ghost" onclick="go('agenda',{from:''})">← Agenda</button>`:''}<button class="ghost" onclick="go('clients',{from:''})">← Clients</button><h2 style="margin:0;flex:1">${esc(c.name)}</h2><button onclick="editOrder(null,'${c.id}')">+ Commande</button><button onclick="editEvent(null,'${c.id}')">+ RDV</button><button class="ghost" onclick="editClient('${c.id}')">Modifier</button></div>
 <div class="grid2"><div class="card"><h3>Fiche</h3><p>${esc(c.address)}<br>${esc(c.zip)} ${esc(c.city)} ${c.dept?'('+esc(c.dept)+')':''}${c.sector?'<br><span class="mute">'+esc(c.sector)+'</span>':''}</p><p>Contact : ${esc(c.contact)}<br>Tél : ${c.phone?`<a href="tel:${esc(c.phone)}">${esc(c.phone)}</a>`:''}${c.mobile?`<br>Portable : <a href="tel:${esc(c.mobile)}">${esc(c.mobile)}</a>`:''}<br>E-mail : ${c.email?`<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>`:''}</p>${c.hq&&c.hq!==c.name?`<p class="mute">Siège : ${esc(c.hq)}</p>`:''}${c.siret?`<p class="mute">SIRET ${esc(c.siret)}</p>`:''}<p style="white-space:pre-wrap">${esc(c.notes)}</p></div>
 <div class="card"><h3>CA par marque et par saison</h3>${bs.length?`<table><tr><th>Marque</th>${ss.map(s=>`<th class="n">${esc(s)}</th>`).join('')}</tr>${bs.map(b=>`<tr><td>${esc(b.name)}</td>${ss.map(s=>{const v=ca(o=>o.clientId===c.id&&o.brandId===b.id&&o.season===s);return`<td class="n">${v?eur(v):''}</td>`}).join('')}</tr>`).join('')}<tr><th>Total</th>${ss.map(s=>`<th class="n">${eur(ca(o=>o.clientId===c.id&&o.season===s))}</th>`).join('')}</tr></table>`:'<p class="mute">Pas encore de commande.</p>'}</div></div>
 <div class="card"><h3>Commandes</h3>${ordersTable(os,false)}</div>
@@ -420,7 +427,7 @@ return{start:monday(d),days:7}}
 const calKey=r=>iso(r.start)+'|'+r.days;
 function calItems(r){const from=iso(r.start),to=iso(addDays(r.start,r.days)),out=[],now=new Date(),nowIso=iso(now),nowHM=gHHMM(now);
 for(const e of db.events){if(state.hiddenUsers.includes(e.userId)||!e.date||e.date<from||e.date>=to)continue;const u=byId('users',e.userId),c=byId('clients',e.clientId);
-out.push({date:e.date,start:e.start||'',end:e.end||'',allDay:!e.start,title:e.title||'(sans titre)',sub:[c?.name,e.place].filter(Boolean).join(', '),color:u?.color||'#039be5',click:`editEvent('${e.id}')`,tip:[e.type,u?.name,e.gcalId?'synchronisé Google':''].filter(Boolean).join(' · ')})}
+out.push({date:e.date,start:e.start||'',end:e.end||'',allDay:!e.start,title:e.title||'(sans titre)',sub:[c?.name,e.place].filter(Boolean).join(', '),color:u?.color||'#039be5',click:`evPeek('${e.id}')`,tip:[e.type,u?.name,e.gcalId?'synchronisé Google':''].filter(Boolean).join(' · ')})}
 if(gWanted()&&state.showG!==false)for(const g of gEv[calKey(r)]||[])out.push({date:g.date,start:g.start,end:g.end,allDay:!!g.allDay,title:g.title,sub:g.place,color:'#7986cb',click:`gAdd('${esc(g.gid)}','${g.date}')`,tip:'Votre agenda Google (visible par vous seul) : cliquez pour l\'ajouter au CRM'});
 out.forEach(x=>x.past=x.date<nowIso||(x.date===nowIso&&!x.allDay&&(x.end||fromMin(Math.min(toMin(x.start)+60,1439)))<=nowHM));
 return out}
@@ -587,6 +594,20 @@ form(id?'Modifier la commande':'Nouvelle commande',[
 {k:'notes',l:'Notes',t:'area'}],
 id?byId('orders',id):{clientId,date:iso(new Date()),status:'Prise',season:state.season,userId:me_u?.id},d=>{d.season=(d.season||'').toUpperCase().replace(/\s/g,'');d.date=d.date||seasonDate(d.season);upsert('orders',id,d)},id?()=>remove('orders',id):null)}
 
+function evPeek(id){const e=byId('events',id);if(!e)return;const u=byId('users',e.userId),c=byId('clients',e.clientId);
+const d=new Date(e.date+'T00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+const row=(ic,html)=>`<div class="peek-row"><i>${ic}</i><div>${html}</div></div>`;
+document.getElementById('modal').innerHTML=`<div class="modal" onclick="if(event.target===this)closeM()"><div class="box peek">
+<div class="peek-tools"><button title="Modifier" onclick="closeM();editEvent('${e.id}')">✏️</button><button title="Supprimer" onclick="evDelete('${e.id}')">🗑️</button><button title="Fermer" onclick="closeM()">✕</button></div>
+<div class="peek-row"><i><span class="peek-sq" style="background:${u?.color||'#039be5'}"></span></i><div><h3>${esc(e.title||'(sans titre)')}</h3><div class="mute" style="text-transform:none">${d.charAt(0).toUpperCase()+d.slice(1)}${e.start?' · '+esc(e.start)+(e.end?' – '+esc(e.end):''):' · Journée entière'}</div></div></div>
+${c?row('🏬',`<b>${esc(c.name)}</b>${c.city?' — '+esc(c.city):''}${c.contact?`<br><span class="mute">${esc(c.contact)}${c.phone||c.mobile?' · <a href="tel:'+esc(c.phone||c.mobile)+'">'+esc(c.phone||c.mobile)+'</a>':''}</span>`:''}<br><button class="peek-client" onclick="closeM();go('client',{clientId:'${c.id}',from:'agenda'})">Ouvrir la fiche client →</button>`)
+:row('🏬',`<span class="mute">Aucun client associé</span> · <a href="#" onclick="closeM();editEvent('${e.id}');return false">Associer un client</a>`)}
+${e.place||c?.address?row('📍',esc(e.place||[c.address,c.zip,c.city].filter(Boolean).join(' '))):''}
+${row('🏷️',`${esc(e.type||'')}${u?` · <span class="mute">${esc(u.name)}</span>`:''}`)}
+${e.report?row('📝',`<div style="white-space:pre-wrap">${esc(e.report)}</div>`):''}
+${e.gcalId?row('📅','<span class="mute">Synchronisé avec Google Agenda</span>'):''}
+</div></div>`}
+function evDelete(id){if(!confirm('Supprimer ce rendez-vous ?'))return;gDel(byId('events',id));remove('events',id);closeM();render()}
 function editEvent(id,clientId,date,pre){
 const ev=id?byId('events',id):null;
 let gInfo='';
