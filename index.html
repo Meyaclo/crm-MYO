@@ -161,7 +161,7 @@ const yearOf=o=>+(o.date||'').slice(0,4);
 const CUR=new Date().getFullYear();
 const sortedClients=()=>[...db.clients].sort((a,b)=>(a.name||'').localeCompare(b.name||''));
 const myUser=()=>db.users.find(u=>u.email&&N(u.email)===N(me?.email))||db.users[0];
-let state={view:'dash',mode:'season',season:'',clientId:null,year:CUR,calView:innerWidth<800?'day':'week',calDate:new Date(),miniDate:null,calScroll:null,hiddenUsers:[],q:'',fActive:'',fBrand:'',fClient:'',fSeason:'',fUser:'',fType:''};
+let state={view:'dash',mode:'season',season:'',clientId:null,year:CUR,calView:innerWidth<800?'day':'week',calDate:new Date(),miniDate:null,calScroll:null,hiddenUsers:[],q:'',fActive:'ca',fBrand:'',fClient:'',fSeason:'',fUser:'',fType:''};
 
 /* ---------- Connexion & synchronisation Supabase ---------- */
 function vLogin(msg){document.getElementById('nav').style.display='none';
@@ -383,11 +383,11 @@ ${byB.map(x=>`<tr><td>${esc(x.b.name)}</td><td style="width:28%"><div class="bar
 
 function vClients(){const q=N(state.q),S=curSeason();
 const m=agg(o=>o.clientId,o=>o.season===S),last=new Map();
-db.orders.forEach(o=>{if(ok(o)&&o.season&&sVal(o.season)>sVal(last.get(o.clientId)))last.set(o.clientId,o.season)});
+db.orders.forEach(o=>{if(ok(o)&&o.season&&+o.amount&&sVal(o.season)>sVal(last.get(o.clientId)))last.set(o.clientId,o.season)});
 const list=sortedClients().filter(c=>(!q||N([c.name,c.city,c.dept,c.contact,c.hq].join(' ')).includes(q))&&(!state.fActive||(state.fActive==='ca')===last.has(c.id)));
 const shown=list.slice(0,500);
 return`<h2>Clients (${db.clients.length})</h2><div class="bar"><input id="q" placeholder="Rechercher nom, ville, dépt, siège…" value="${esc(state.q)}" oninput="state.q=this.value;clearTimeout(window._t);window._t=setTimeout(()=>{render();const i=document.getElementById('q');i.focus();i.setSelectionRange(i.value.length,i.value.length)},300)">
-<select onchange="state.fActive=this.value;render()"><option value="">Tous</option><option value="ca" ${state.fActive==='ca'?'selected':''}>Avec CA</option><option value="no" ${state.fActive==='no'?'selected':''}>Sans CA (prospects)</option></select>
+<select onchange="state.fActive=this.value;render()"><option value="ca" ${state.fActive==='ca'?'selected':''}>Actifs</option><option value="no" ${state.fActive==='no'?'selected':''}>Inactifs</option><option value="" ${!state.fActive?'selected':''}>Tous</option></select>
 ${S?'Saison '+seasonSel("state.season=this.value;render()"):''}<button onclick="editClient()">+ Nouveau client</button><span class="mute">${list.length} résultat(s)${list.length>500?' — 500 premiers affichés, affinez la recherche':''}</span></div>
 <div class="card"><table><tr><th>Enseigne</th><th>Ville</th><th>Dépt</th><th>Contact</th><th class="n">${esc(S||'CA')}</th><th class="n">N-1</th><th>Dernière saison</th></tr>
 ${shown.map(c=>{const a=m.get(c.id)||Z;return`<tr class="click" onclick="go('client',{clientId:'${c.id}'})"><td><b>${esc(c.name)}</b></td><td>${esc(c.city)}</td><td>${esc(c.dept)}</td><td>${esc(c.contact)}</td><td class="n">${a.v?eur(a.v):''}</td><td class="n">${a.n1?eur(a.n1):''}</td><td>${esc(last.get(c.id)||'—')}</td></tr>`}).join('')||'<tr><td colspan="7" class="mute">Aucun client.</td></tr>'}</table></div>`}
