@@ -54,6 +54,62 @@ input,select,textarea{border:1px solid var(--line);border-radius:6px;padding:7px
 .gcal{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:6px;padding:4px 8px;background:#fff}
 #toast{position:fixed;bottom:18px;right:18px;background:#152238;color:#fff;padding:10px 14px;border-radius:8px;font-size:13px;z-index:20;display:none;max-width:340px}
 #implog{font-size:13px;margin-top:10px;line-height:1.5}
+.cal{display:grid;grid-template-columns:240px minmax(0,1fr);height:calc(100vh - 48px);background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;color:#3c4043}
+.cal-side{padding:14px 16px;border-right:1px solid var(--line);overflow:auto}
+.cal-create{display:inline-flex;align-items:center;gap:12px;background:#fff;color:#3c4043;border-radius:16px;padding:12px 24px 12px 16px;font-size:14px;font-weight:500;box-shadow:0 1px 2px rgba(60,64,67,.3),0 2px 6px 2px rgba(60,64,67,.15);margin-bottom:18px}
+.cal-create span{font-size:28px;font-weight:300;line-height:20px;color:#1a73e8}
+.cal-create:hover{background:#f6fafe;box-shadow:0 1px 3px rgba(60,64,67,.3),0 4px 8px 3px rgba(60,64,67,.15)}
+.mini{font-size:12px;margin-bottom:10px}.mini-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;padding-left:6px}
+.mini-top b{font-weight:500;font-size:14px}.mini-top b::first-letter{text-transform:uppercase}
+.mini-g{display:grid;grid-template-columns:repeat(7,1fr);text-align:center}
+.mini-g i{font-style:normal;color:#70757a;font-size:10px;padding:4px 0;font-weight:500}
+.mini-g a{cursor:pointer;width:24px;height:24px;line-height:24px;margin:1px auto;border-radius:50%;font-size:10.5px;color:#3c4043}
+.mini-g a:hover{background:#f1f3f4}.mini-g a.out{color:#9aa0a6}.mini-g a.rng{background:#e8f0fe}
+.mini-g a.sel{background:#c2e7ff;color:#001d35;font-weight:600}.mini-g a.today{background:#1a73e8;color:#fff;font-weight:600}
+.cal-side h5{margin:16px 0 6px;font-size:14px;font-weight:500}
+.cal-chk{display:flex;align-items:center;gap:10px;padding:5px 2px;font-size:13px;cursor:pointer;border-radius:4px}
+.cal-chk:hover{background:#f1f3f4}.cal-chk input{width:17px;height:17px;margin:0}
+.cal-sync .gcal{display:flex;flex-wrap:wrap;align-items:center;gap:6px;border:0;padding:0;background:none;font-size:13px}.cal-sync .gcal>button{flex:1 1 auto}.cal-sync .gcal>label{flex-basis:100%}
+.cal-main{display:flex;flex-direction:column;min-width:0;min-height:0}
+.cal-top{display:flex;align-items:center;gap:4px;padding:8px 16px;border-bottom:1px solid var(--line)}
+.cal-top h2{margin:0 0 0 12px;font-size:22px;font-weight:400;color:#3c4043}.cal-top h2::first-letter{text-transform:uppercase}
+.cal-today{border-radius:18px;padding:8px 18px;margin-right:8px;font-weight:500;border-color:#dadce0!important}
+.cal-today:hover{background:#f1f3f4}
+.cal-nav{background:none;color:#5f6368;font-size:24px;width:36px;height:36px;border-radius:50%;padding:0;line-height:1}
+.cal-nav:hover{background:#f1f3f4}.cal-nav.sm{width:26px;height:26px;font-size:17px}
+.cal-view{border-radius:18px;padding:7px 14px;border-color:#dadce0;font-weight:500;color:#3c4043}
+.tg{display:flex;flex-direction:column;flex:1;min-height:0}
+.tg-row{display:grid;grid-template-columns:56px repeat(var(--n),minmax(0,1fr))}
+.tg-head,.tg-ad{overflow-y:hidden;scrollbar-gutter:stable}
+.tg-dh{text-align:center;padding:8px 0 4px;cursor:pointer}
+.tg-dh span{display:block;font-size:11px;color:#70757a;text-transform:uppercase;font-weight:500;letter-spacing:.8px}
+.tg-dh b{display:inline-block;width:46px;height:46px;line-height:46px;border-radius:50%;font-size:26px;font-weight:400;color:#3c4043;margin-top:2px}
+.tg-dh:hover b{background:#f1f3f4}.tg-dh.today span{color:#1a73e8}.tg-dh.today b{background:#1a73e8;color:#fff}
+.tg-ad{border-bottom:1px solid var(--line)}
+.tg-adc{border-left:1px solid var(--line);padding:2px 6px 4px 2px;min-height:26px;cursor:pointer}
+.ad-ev,.m-ev.ad{color:#fff;border-radius:4px;padding:2px 8px;font-size:12px;font-weight:500;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.tg-body{flex:1;overflow-y:auto;scrollbar-gutter:stable;padding-top:8px}
+.tg-hours div{height:48px;font-size:10px;color:#70757a;text-align:right;padding-right:8px}
+.tg-hours span{position:relative;top:-7px}
+.tg-col{position:relative;border-left:1px solid var(--line);background:repeating-linear-gradient(to bottom,var(--line) 0,var(--line) 1px,transparent 1px,transparent 48px);cursor:pointer}
+.tg-ev{position:absolute;border-radius:5px;color:#fff;font-size:12px;padding:3px 7px;overflow:hidden;box-sizing:border-box;border:1px solid #fff;cursor:pointer;line-height:1.3;z-index:1}
+.tg-ev.short{white-space:nowrap;text-overflow:ellipsis;padding-top:1px}.tg-ev b{font-weight:500}.tg-ev span{display:block}
+.tg-ev:hover{box-shadow:0 4px 8px rgba(0,0,0,.25);z-index:9!important}
+.cal .past{opacity:.62}
+.tg-now{position:absolute;left:-1px;right:0;border-top:2px solid #ea4335;z-index:3;pointer-events:none}
+.tg-now:before{content:'';position:absolute;left:-7px;top:-7px;width:12px;height:12px;border-radius:50%;background:#ea4335}
+.mg{display:flex;flex-direction:column;flex:1;min-height:0}
+.mg-h{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));text-align:center;font-size:11px;color:#70757a;text-transform:uppercase;font-weight:500;padding-top:8px;border-left:1px solid var(--line)}
+.mg-b{flex:1;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-template-rows:repeat(6,minmax(0,1fr));border-left:1px solid var(--line)}
+.mc{border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:2px 4px;overflow:hidden;cursor:pointer;min-height:80px}
+.mc-n{text-align:center;font-size:12px;margin:3px 0;font-weight:500}
+.mc-n span{display:inline-block;min-width:24px;height:24px;line-height:24px;border-radius:12px;padding:0 4px}
+.mc-n span:hover{background:#f1f3f4}.mc.out .mc-n span{color:#70757a}.mc.today .mc-n span{background:#1a73e8;color:#fff}
+.m-ev{font-size:12px;padding:1px 6px;border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:6px;margin-bottom:1px;cursor:pointer}
+.m-ev:hover{background:#f1f3f4}.m-ev i{width:8px;height:8px;border-radius:50%;flex-shrink:0}.m-ev b{font-weight:500;overflow:hidden;text-overflow:ellipsis}
+.m-ev.ad{display:block}.m-ev.ad:hover{background:inherit;filter:brightness(.95)}
+.m-more{font-size:12px;font-weight:500;padding:1px 6px;border-radius:4px}.m-more:hover{background:#f1f3f4}
+@media(max-width:800px){.cal{grid-template-columns:minmax(0,1fr);height:calc(100vh - 100px)}.cal-side{display:none}.cal-top{padding:6px}.cal-top h2{font-size:16px;margin-left:4px}.cal-today{padding:6px 10px;margin-right:2px}}
 @media(max-width:800px){body{flex-direction:column}nav{width:100%;display:flex;overflow-x:auto;padding:0}nav h1{display:none}.who{border:0;margin:0;padding:10px 18px}.grid2{grid-template-columns:1fr}.week{grid-template-columns:1fr}.day{min-height:auto}}
 </style>
 </head>
@@ -98,7 +154,7 @@ const yearOf=o=>+(o.date||'').slice(0,4);
 const CUR=new Date().getFullYear();
 const sortedClients=()=>[...db.clients].sort((a,b)=>(a.name||'').localeCompare(b.name||''));
 const myUser=()=>db.users.find(u=>u.email&&N(u.email)===N(me?.email))||db.users[0];
-let state={view:'dash',mode:'season',season:'',clientId:null,year:CUR,weekStart:monday(new Date()),hiddenUsers:[],q:'',fActive:'',fBrand:'',fClient:'',fSeason:'',fUser:'',fType:''};
+let state={view:'dash',mode:'season',season:'',clientId:null,year:CUR,calView:innerWidth<800?'day':'week',calDate:new Date(),miniDate:null,calScroll:null,hiddenUsers:[],q:'',fActive:'',fBrand:'',fClient:'',fSeason:'',fUser:'',fType:''};
 
 /* ---------- Connexion & synchronisation Supabase ---------- */
 function vLogin(msg){document.getElementById('nav').style.display='none';
@@ -224,11 +280,11 @@ setInterval(()=>{if(document.visibilityState==='visible')gSync()},120000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')gSync()});
 
 /* Affichage du planning Google (événements non présents dans le CRM), semaine par semaine */
-async function gLoadWeek(ws,force){const k=iso(ws);if(!gWanted()||gLoading[k]||(!force&&Array.isArray(gEv[k])))return;
+async function gLoadRange(ws,days,force){const k=iso(ws)+'|'+days;if(!gWanted()||gLoading[k]||(!force&&Array.isArray(gEv[k])))return;
 if(!gValid()){gEv[k]=null;return}
 gLoading[k]=1;
-try{const end=new Date(ws);end.setDate(end.getDate()+7);
-const r=await gFetch(gTok.t,`${GAPI}?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=${encodeURIComponent(ws.toISOString())}&timeMax=${encodeURIComponent(end.toISOString())}`,'GET');
+try{const end=addDays(ws,days);
+const r=await gFetch(gTok.t,`${GAPI}?singleEvents=true&orderBy=startTime&maxResults=2500&timeMin=${encodeURIComponent(ws.toISOString())}&timeMax=${encodeURIComponent(end.toISOString())}`,'GET');
 if(r.status===401){gEv[k]=null}else{if(!r.ok)throw new Error(r.status);const j=await r.json();
 const crmG=new Set(db.events.map(e=>e.gcalId).filter(Boolean)),out=[];
 for(const it of j.items||[]){if(it.status==='cancelled'||crmG.has(it.id)||it.extendedProperties?.private?.crmId||it.eventType==='workingLocation')continue;
@@ -237,10 +293,10 @@ if(it.start?.date){for(let d=new Date(it.start.date+'T00:00');iso(d)<it.end.date
 else if(it.start?.dateTime)out.push({...base,...gTimes(it)})}
 gEv[k]=out}}
 catch(e){gEv[k]=[];toast('Google Agenda : lecture impossible ('+esc(e.message)+')')}
-delete gLoading[k];if(state.view==='agenda'&&iso(state.weekStart)===k)render()}
-function gRefresh(){gToken(false).then(async()=>{gEv={};await gSync(true);gLoadWeek(state.weekStart,true);render()}).catch(()=>toast('Google Agenda : reconnectez-vous.'))}
+delete gLoading[k];if(state.view==='agenda'&&calKey(calRange())===k)render()}
+function gRefresh(){gToken(false).then(async()=>{gEv={};await gSync(true);render()}).catch(()=>toast('Google Agenda : reconnectez-vous.'))}
 function gEvLine(g){return`<div class="ev gev" onclick="event.stopPropagation();gAdd('${esc(g.gid)}','${esc(g.date)}')" title="Cliquez pour l'ajouter au CRM"><b>${g.allDay?'Journée':esc(g.start)+(g.end?'–'+esc(g.end):'')}</b> <span class="mute">· Google</span><br>${esc(g.title)}${g.place?'<br><i>'+esc(g.place)+'</i>':''}</div>`}
-function gAdd(gid,date){const g=(gEv[iso(state.weekStart)]||[]).find(x=>x.gid===gid&&x.date===date);if(!g)return;
+function gAdd(gid,date){const g=Object.values(gEv).filter(Array.isArray).flat().find(x=>x.gid===gid&&x.date===date);if(!g)return;
 editEvent(null,null,null,{title:g.title,date:g.date,start:g.start,end:g.end,place:g.place,type:'Autre',gcalId:g.gid,link:g.link})}
 function gConnect(){gToken(true).then(async()=>{toast('✅ Google Agenda connecté');gEv={};render();await gSync(true)}).catch(e=>alert('Connexion Google impossible : '+e.message))}
 function gDisconnect(){try{if(gTok&&window.google?.accounts?.oauth2)google.accounts.oauth2.revoke(gTok.t,()=>{});localStorage.removeItem('gtok');localStorage.removeItem('gcal')}catch(e){}gTok=null;gEv={};toast('Google Agenda déconnecté');render()}
@@ -271,7 +327,8 @@ function curSeason(){const ss=seasons();if(!ss.includes(state.season))state.seas
 const VIEWS=[['dash','Tableau de bord'],['clients','Clients'],['orders','Commandes'],['agenda','Agenda'],['brands','Marques'],['team','Équipe'],['export','Import / Export']];
 function nav(){document.getElementById('nav').innerHTML='<h1>CRM Meyaclo</h1>'+VIEWS.map(([k,l])=>`<a class="${state.view===k||(k==='clients'&&state.view==='client')?'on':''}" onclick="go('${k}')">${l}</a>`).join('')+`<div class="who">${esc(me?.email)}<br><a onclick="logout()" style="padding:6px 0">Déconnexion</a></div>`}
 function go(v,extra){Object.assign(state,{view:v},extra||{});render()}
-function render(){nav();const V={dash:vDash,clients:vClients,client:vClient,orders:vOrders,agenda:vAgenda,brands:vBrands,team:vTeam,export:vExport};document.getElementById('app').innerHTML=V[state.view]()}
+function render(){nav();const V={dash:vDash,clients:vClients,client:vClient,orders:vOrders,agenda:vAgenda,brands:vBrands,team:vTeam,export:vExport};document.getElementById('app').innerHTML=V[state.view]();
+if(state.view==='agenda'){const b=document.getElementById('tgb');if(b)b.scrollTop=state.calScroll??7*HOUR}}
 
 function evLine(e){const u=byId('users',e.userId),c=byId('clients',e.clientId);return`<div class="ev" style="border-color:${u?.color||'#999'}" onclick="editEvent('${e.id}')"><b>${fmtDate(e.date)} ${e.start||''}</b> · ${esc(e.type)} · ${esc(e.title)}${c?' — '+esc(c.name):''} <span class="mute">(${esc(u?.name)})</span>${e.gcalId?' 📅':''}${e.report?'<br><span class="mute">'+esc(e.report)+'</span>':''}</div>`}
 const seasonSel=(onch)=>`<select onchange="${onch}">${seasons().map(s=>`<option ${s===state.season?'selected':''}>${s}</option>`).join('')}</select>`;
@@ -351,15 +408,69 @@ const shown=os.slice(0,800);
 return`<h2>Commandes</h2><div class="bar">${sel('fSeason',ss.map(s=>[s,s]),'Toutes saisons')}${sel('fBrand',[...db.brands].sort((a,b)=>a.name.localeCompare(b.name)).map(b=>[b.id,b.name]),'Toutes marques')}${sel('fUser',db.users.map(u=>[u.id,u.name]),'Tous commerciaux')}${sel('fType',TYPES.map(t=>[t,t]),'Tous types')}${sel('fClient',sortedClients().filter(c=>usedClients.has(c.id)).map(c=>[c.id,c.name]),'Tous clients')}<button onclick="editOrder()">+ Nouvelle commande</button></div>
 <div class="bar"><span class="mute">${os.length} ligne(s) — Réalisé <b>${eur(T.v)}</b> · Objectif <b>${eur(T.obj)}</b> (${pct(T.v,T.obj)}) · N-1 <b>${eur(T.n1)}</b> (${evo(T.v,T.n1)})${os.length>800?' — 800 premières lignes affichées':''}</span></div><div class="card">${ordersTable(shown)}</div>`}
 
-function vAgenda(){const ws=state.weekStart,days=[...Array(7)].map((_,i)=>{const d=new Date(ws);d.setDate(d.getDate()+i);return d}),today=iso(new Date());
-const vis=db.events.filter(e=>!state.hiddenUsers.includes(e.userId));
-const gk=iso(ws);if(gWanted())gLoadWeek(ws);
-const gl=gWanted()&&state.showG!==false&&Array.isArray(gEv[gk])?gEv[gk]:[];
-const gChip=gWanted()?`<label class="chip"><input type="checkbox" ${state.showG!==false?'checked':''} onchange="state.showG=this.checked;render()"><span class="dot" style="background:#9aa3b2"></span>Mon planning Google${gLoading[gk]?' <span class="mute">(chargement…)</span>':''}</label>${gEv[gk]===null?'<button class="ghost" onclick="gRefresh()">🔄 Afficher mon planning Google</button>':''}`:'';
-return`<h2>Agenda équipe</h2><div class="bar"><button class="ghost" onclick="shiftWeek(-7)">←</button><button class="ghost" onclick="state.weekStart=monday(new Date());render()">Aujourd'hui</button><button class="ghost" onclick="shiftWeek(7)">→</button><b>Semaine du ${days[0].toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}</b><span style="flex:1"></span>${gBar()}<button onclick="editEvent()">+ Rendez-vous</button></div>
-<div class="bar">${db.users.map(u=>`<label class="chip"><input type="checkbox" ${state.hiddenUsers.includes(u.id)?'':'checked'} onchange="toggleUser('${u.id}')"><span class="dot" style="background:${u.color}"></span>${esc(u.name)}</label>`).join('')}${gChip}</div>
-<div class="week">${days.map(d=>{const k=iso(d);return`<div class="day ${k===today?'today':''}" ondblclick="editEvent(null,null,'${k}')"><h4>${d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'short'})}</h4>${[...vis.filter(e=>e.date===k).map(e=>({s:e.start||'',h:(()=>{const u=byId('users',e.userId),c=byId('clients',e.clientId);return`<div class="ev" style="border-color:${u?.color||'#999'}" onclick="event.stopPropagation();editEvent('${e.id}')"><b>${e.start||''}${e.end?'–'+e.end:''}</b> ${esc(e.type)}${e.gcalId?' 📅':''}<br>${esc(e.title)}${c?'<br><i>'+esc(c.name)+'</i>':''}<br><span class="mute">${esc(u?.name)}</span></div>`})()})),...gl.filter(g=>g.date===k).map(g=>({s:g.start,h:gEvLine(g)}))].sort((a,b)=>a.s.localeCompare(b.s)).map(x=>x.h).join('')}</div>`}).join('')}</div><p class="mute">Double-cliquez sur un jour pour ajouter un rendez-vous. 📅 = présent dans Google Agenda. En gris pointillé : votre planning Google, visible par vous seul (cliquez pour l'ajouter au CRM). Pour qu'un collègue reçoive l'invitation, renseignez son e-mail Gmail dans Équipe.</p>`}
-function shiftWeek(n){const d=new Date(state.weekStart);d.setDate(d.getDate()+n);state.weekStart=d;render()}
+/* ---------- Agenda (présentation façon agenda en ligne : jour / semaine / mois) ---------- */
+const HOUR=48,WD=['lun.','mar.','mer.','jeu.','ven.','sam.','dim.'];
+const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+const toMin=h=>h?(+h.slice(0,2))*60+ +h.slice(3,5):0;
+const fromMin=m=>`${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
+function calRange(){const d=new Date(state.calDate);d.setHours(0,0,0,0);
+if(state.calView==='day')return{start:d,days:1};
+if(state.calView==='month')return{start:monday(new Date(d.getFullYear(),d.getMonth(),1)),days:42};
+return{start:monday(d),days:7}}
+const calKey=r=>iso(r.start)+'|'+r.days;
+function calItems(r){const from=iso(r.start),to=iso(addDays(r.start,r.days)),out=[],now=new Date(),nowIso=iso(now),nowHM=gHHMM(now);
+for(const e of db.events){if(state.hiddenUsers.includes(e.userId)||!e.date||e.date<from||e.date>=to)continue;const u=byId('users',e.userId),c=byId('clients',e.clientId);
+out.push({date:e.date,start:e.start||'',end:e.end||'',allDay:!e.start,title:e.title||'(sans titre)',sub:[c?.name,e.place].filter(Boolean).join(', '),color:u?.color||'#039be5',click:`editEvent('${e.id}')`,tip:[e.type,u?.name,e.gcalId?'synchronisé Google':''].filter(Boolean).join(' · ')})}
+if(gWanted()&&state.showG!==false)for(const g of gEv[calKey(r)]||[])out.push({date:g.date,start:g.start,end:g.end,allDay:!!g.allDay,title:g.title,sub:g.place,color:'#7986cb',click:`gAdd('${esc(g.gid)}','${g.date}')`,tip:'Votre agenda Google (visible par vous seul) : cliquez pour l\'ajouter au CRM'});
+out.forEach(x=>x.past=x.date<nowIso||(x.date===nowIso&&!x.allDay&&(x.end||fromMin(Math.min(toMin(x.start)+60,1439)))<=nowHM));
+return out}
+// Répartit les RDV qui se chevauchent en colonnes
+function calLayout(list){const ev=list.map(x=>{const s=toMin(x.start);let e=x.end?toMin(x.end):s+60;if(e<=s)e=s+30;return{...x,s,e}}).sort((a,b)=>a.s-b.s||b.e-a.e);
+let cluster=[],cols=[],maxEnd=-1;const flush=()=>{cluster.forEach(x=>x.n=cols.length);cluster=[];cols=[];maxEnd=-1};
+for(const x of ev){if(x.s>=maxEnd)flush();let i=cols.findIndex(end=>end<=x.s);if(i<0){i=cols.length;cols.push(0)}cols[i]=x.e;x.col=i;cluster.push(x);maxEnd=Math.max(maxEnd,x.e)}
+flush();return ev}
+const evBlock=x=>{const h=Math.max((x.e-x.s)/60*HOUR-2,18),short=h<40,l=x.col/x.n*100,w=x.col===x.n-1?100/x.n:Math.min(100-l,100/x.n*1.7);
+return`<div class="tg-ev${x.past?' past':''}${short?' short':''}" style="top:${x.s/60*HOUR}px;height:${h}px;left:calc(${l}% + 1px);width:calc(${w}% - 8px);z-index:${1+x.col};background:${x.color}" title="${esc(x.tip)}" onclick="event.stopPropagation();${x.click}"><b>${esc(x.title)}</b>${short?`, ${esc(x.start)}`:`<span>${esc(x.start)}${x.end?' – '+esc(x.end):''}</span>${x.sub?`<span>${esc(x.sub)}</span>`:''}`}</div>`};
+const adChip=x=>`<div class="ad-ev${x.past?' past':''}" style="background:${x.color}" title="${esc(x.tip)}" onclick="event.stopPropagation();${x.click}">${esc(x.title)}</div>`;
+const mChip=x=>x.allDay?`<div class="m-ev ad${x.past?' past':''}" style="background:${x.color}" title="${esc(x.tip)}" onclick="event.stopPropagation();${x.click}">${esc(x.title)}</div>`
+:`<div class="m-ev${x.past?' past':''}" title="${esc(x.tip)}" onclick="event.stopPropagation();${x.click}"><i style="background:${x.color}"></i>${esc(x.start)} <b>${esc(x.title)}</b></div>`;
+
+function miniCal(){const m=state.miniDate?new Date(state.miniDate):new Date(state.calDate);m.setDate(1);const s=monday(m),today=iso(new Date()),sel=iso(new Date(state.calDate)),r=calRange(),rf=iso(r.start),rt=iso(addDays(r.start,r.days));
+return`<div class="mini"><div class="mini-top"><b>${m.toLocaleDateString('fr-FR',{month:'long',year:'numeric'})}</b><span><button class="cal-nav sm" onclick="calMini(-1)">‹</button><button class="cal-nav sm" onclick="calMini(1)">›</button></span></div><div class="mini-g">${['L','M','M','J','V','S','D'].map(x=>`<i>${x}</i>`).join('')}${[...Array(42)].map((_,i)=>{const d=addDays(s,i),k=iso(d);return`<a class="${d.getMonth()!==m.getMonth()?'out':''}${state.calView!=='month'&&k>=rf&&k<rt?' rng':''}${k===sel?' sel':''}${k===today?' today':''}" onclick="calPick('${k}')">${d.getDate()}</a>`}).join('')}</div></div>`}
+function calMini(n){const m=state.miniDate?new Date(state.miniDate):new Date(state.calDate);m.setDate(1);m.setMonth(m.getMonth()+n);state.miniDate=m;render()}
+function calPick(k){state.calDate=new Date(k+'T00:00');state.miniDate=null;render()}
+function calGo(v,k){state.calView=v;if(k)state.calDate=new Date(k+'T00:00');state.miniDate=null;state.calScroll=null;render()}
+function calShift(n){const d=new Date(state.calDate);if(state.calView==='month'){d.setDate(1);d.setMonth(d.getMonth()+n)}else d.setDate(d.getDate()+n*(state.calView==='day'?1:7));state.calDate=d;state.miniDate=null;render()}
+function calToday(){state.calDate=new Date();state.miniDate=null;state.calScroll=null;render()}
+function calSlot(ev,date){const r=ev.currentTarget.getBoundingClientRect(),m=Math.max(0,Math.min(1410,Math.floor((ev.clientY-r.top)/HOUR*2)*30));editEvent(null,null,date,{start:fromMin(m),end:fromMin(Math.min(m+60,1439))})}
+document.addEventListener('keydown',e=>{if(state.view!=='agenda'||document.getElementById('modal').innerHTML||/INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName||'')||e.metaKey||e.ctrlKey||e.altKey)return;
+const a={t:calToday,d:()=>calGo('day'),w:()=>calGo('week'),s:()=>calGo('week'),m:()=>calGo('month'),j:()=>calShift(1),n:()=>calShift(1),k:()=>calShift(-1),p:()=>calShift(-1),c:()=>editEvent(),ArrowRight:()=>calShift(1),ArrowLeft:()=>calShift(-1)}[e.key];
+if(a){e.preventDefault();a()}});
+
+function vAgenda(){const r=calRange(),k=calKey(r),days=[...Array(r.days)].map((_,i)=>addDays(r.start,i)),today=iso(new Date()),cd=new Date(state.calDate);
+if(gWanted())gLoadRange(r.start,r.days);
+const by={};calItems(r).forEach(x=>(by[x.date]=by[x.date]||[]).push(x));
+const title=state.calView==='day'?cd.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})
+:state.calView==='month'?cd.toLocaleDateString('fr-FR',{month:'long',year:'numeric'})
+:days[0].getMonth()===days[6].getMonth()?days[0].toLocaleDateString('fr-FR',{month:'long',year:'numeric'})
+:days[0].toLocaleDateString('fr-FR',{month:'short'})+' – '+days[6].toLocaleDateString('fr-FR',{month:'short',year:'numeric'});
+let body;
+if(state.calView==='month'){const mo=cd.getMonth();
+body=`<div class="mg"><div class="mg-h">${WD.map(w=>`<div>${w}</div>`).join('')}</div><div class="mg-b">${days.map(d=>{const k=iso(d),l=(by[k]||[]).sort((a,b)=>(a.allDay?'':'1'+a.start).localeCompare(b.allDay?'':'1'+b.start));
+return`<div class="mc${d.getMonth()!==mo?' out':''}${k===today?' today':''}" onclick="editEvent(null,null,'${k}')"><div class="mc-n"><span onclick="event.stopPropagation();calGo('day','${k}')">${d.getDate()===1?d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'}):d.getDate()}</span></div>${l.slice(0,3).map(mChip).join('')}${l.length>3?`<div class="m-more" onclick="event.stopPropagation();calGo('day','${k}')">${l.length-3} autre${l.length>4?'s':''}</div>`:''}</div>`}).join('')}</div></div>`}
+else{const nd=new Date(),nowM=nd.getHours()*60+nd.getMinutes();
+const head=`<div class="tg-row tg-head">${'<div class="tg-gut"></div>'}${days.map(d=>{const k=iso(d);return`<div class="tg-dh${k===today?' today':''}" onclick="calGo('day','${k}')"><span>${WD[(d.getDay()+6)%7]}</span><b>${d.getDate()}</b></div>`}).join('')}</div>`;
+const ad=`<div class="tg-row tg-ad"><div class="tg-gut"></div>${days.map(d=>{const k=iso(d);return`<div class="tg-adc" onclick="editEvent(null,null,'${k}',{start:'',end:''})">${(by[k]||[]).filter(x=>x.allDay).map(adChip).join('')}</div>`}).join('')}</div>`;
+const hours=`<div class="tg-hours">${[...Array(24)].map((_,h)=>`<div><span>${h?String(h).padStart(2,'0')+':00':''}</span></div>`).join('')}</div>`;
+const cols=days.map(d=>{const k=iso(d);return`<div class="tg-col" onclick="calSlot(event,'${k}')">${calLayout((by[k]||[]).filter(x=>!x.allDay)).map(evBlock).join('')}${k===today?`<div class="tg-now" style="top:${nowM/60*HOUR}px"></div>`:''}</div>`}).join('');
+body=`<div class="tg" style="--n:${r.days}">${head}${ad}<div class="tg-body" id="tgb" onscroll="state.calScroll=this.scrollTop"><div class="tg-row" style="height:${24*HOUR}px">${hours}${cols}</div></div></div>`}
+const side=`<aside class="cal-side"><button class="cal-create" onclick="editEvent()"><span>+</span>Créer</button>${miniCal()}
+<h5>Agendas de l'équipe</h5>${db.users.map(u=>`<label class="cal-chk"><input type="checkbox" ${state.hiddenUsers.includes(u.id)?'':'checked'} onchange="toggleUser('${u.id}')" style="accent-color:${u.color}">${esc(u.name)}</label>`).join('')}
+${gWanted()?`<label class="cal-chk"><input type="checkbox" ${state.showG!==false?'checked':''} onchange="state.showG=this.checked;render()" style="accent-color:#7986cb"><span title="Visible par vous seul">Mon agenda Google</span></label>`:''}
+<h5>Synchronisation Google</h5><div class="cal-sync">${gBar()}</div>
+<p class="mute" style="font-size:11px;margin-top:16px">Raccourcis : T aujourd'hui · J/K suivant/précédent · J, S, M vues jour/semaine/mois (D/W aussi) · C créer.</p></aside>`;
+return`<div class="cal">${side}<section class="cal-main"><header class="cal-top"><button class="ghost cal-today" onclick="calToday()">Aujourd'hui</button><button class="cal-nav" onclick="calShift(-1)" title="Précédent">‹</button><button class="cal-nav" onclick="calShift(1)" title="Suivant">›</button><h2>${esc(title)}</h2><span style="flex:1"></span>${gLoading[k]?'<span class="mute" style="font-size:12px">Chargement Google…</span>':''}<select class="cal-view" onchange="calGo(this.value)">${[['day','Jour'],['week','Semaine'],['month','Mois']].map(([v,l])=>`<option value="${v}" ${state.calView===v?'selected':''}>${l}</option>`).join('')}</select></header>${body}</section></div>`}
+
 function toggleUser(id){const h=state.hiddenUsers;state.hiddenUsers=h.includes(id)?h.filter(x=>x!==id):[...h,id];render()}
 
 function vBrands(){const S=curSeason(),m=agg(o=>o.brandId,o=>o.season===S);
@@ -482,9 +593,9 @@ let gInfo='';
 if(pre?.link)gInfo+=`<p><a href="${esc(pre.link)}" target="_blank">Ouvrir dans Google Agenda ↗</a></p>`;
 if(GOOGLE_CLIENT_ID){if(!gWanted())gInfo+='<p class="mute">📅 Connectez votre Google Agenda (bouton dans l\'Agenda) pour que ce RDV y apparaisse automatiquement.</p>';
 else if(ev?.gcalOwner&&N(ev.gcalOwner)!==N(me?.email))gInfo+=`<p class="mute">📅 Ce RDV est dans l'agenda Google de ${esc(ev.gcalOwner)} : il y sera mis à jour à sa prochaine ouverture du CRM.</p>`;
-else if(pre)gInfo+='<p class="mute">📅 Cet événement Google sera ajouté au CRM (visible par l\'équipe) et restera synchronisé avec votre Google Agenda.</p>';
+else if(pre?.gcalId)gInfo+='<p class="mute">📅 Cet événement Google sera ajouté au CRM (visible par l\'équipe) et restera synchronisé avec votre Google Agenda.</p>';
 else gInfo+='<p class="mute">📅 Synchronisé avec votre Google Agenda (le commercial affecté reçoit une invitation).</p>'}
-form(pre?'Ajouter au CRM':id?'Modifier le rendez-vous':'Nouveau rendez-vous',[
+form(pre?.gcalId?'Ajouter au CRM':id?'Modifier le rendez-vous':'Nouveau rendez-vous',[
 {k:'title',l:'Objet *',req:1},
 {k:'type',l:'Type',t:'select',o:['RDV client','Présentation collection','Salon','Showroom','Appel','Livraison','Autre'].map(s=>[s,s])},
 {k:'date',l:'Date',t:'date',req:1},{k:'start',l:'Début',t:'time'},{k:'end',l:'Fin',t:'time'},
@@ -493,7 +604,7 @@ form(pre?'Ajouter au CRM':id?'Modifier le rendez-vous':'Nouveau rendez-vous',[
 {k:'place',l:'Lieu'},
 {k:'report',l:'Compte rendu',t:'area'}],
 ev||{clientId:clientId||'',date:date||iso(new Date()),start:'10:00',end:'11:00',type:'RDV client',userId:myUser()?.id,...(pre||{})},
-d=>{d.crmUpdated=Date.now();const o=upsert('events',id,pre?{...d,gcalId:pre.gcalId,gcalOwner:me.email,fromGoogle:true}:d);if(pre)gEv={};gPush(o)},
+d=>{d.crmUpdated=Date.now();const o=upsert('events',id,pre?.gcalId?{...d,gcalId:pre.gcalId,gcalOwner:me.email,fromGoogle:true}:d);if(pre?.gcalId)gEv={};gPush(o)},
 id?()=>{gDel(byId('events',id));remove('events',id)}:null,gInfo)}
 
 function editBrand(id){form(id?'Modifier la marque':'Nouvelle marque',[{k:'name',l:'Marque *',req:1},{k:'commission',l:'Taux de commission (%)',t:'number'},{k:'contact',l:'Contact marque'},{k:'notes',l:'Notes',t:'area'}],
