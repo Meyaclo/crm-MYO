@@ -111,7 +111,7 @@ me=session.user;document.getElementById('nav').style.display='';
 document.getElementById('app').innerHTML='<p class="mute">Chargement des données…</p>';
 try{await loadAll()}catch(e){document.getElementById('app').innerHTML=`<p class="down">Erreur de connexion à la base : ${esc(e.message)}</p>`;return}
 if(!db.brands.length&&!db.users.length){const s=seed();s.users[0].name=me.email.split('@')[0];s.users[0].email=me.email;await putMany([...s.brands.map(x=>['brands',x]),...s.users.map(x=>['users',x])]);db=s}
-listen();render()}
+listen();render();gSync(true)}
 
 async function loadAll(){const d={brands:[],users:[],clients:[],orders:[],events:[]};
 for(let from=0;;from+=1000){const{data,error}=await sb.from('records').select('id,kind,data').order('id').range(from,from+999);if(error)throw error;data.forEach(r=>{if(d[r.kind])d[r.kind].push(r.data)});if(data.length<1000)break}db=d}
@@ -128,16 +128,24 @@ async function logout(){await sb.auth.signOut();location.reload()}
 function upsert(arr,id,d){let o;if(id){o=byId(arr,id);Object.assign(o,d)}else{o={id:uid(),...d};db[arr].push(o)}putMany([[arr,o]]);return o}
 function remove(arr,id){db[arr]=db[arr].filter(x=>x.id!==id);sb.from('records').delete().eq('id',id).then(({error})=>{if(error)alert('Erreur de suppression : '+error.message)})}
 
-/* ---------- Google Agenda ----------
+/* ---------- Google Agenda : synchronisation dans les deux sens ----------
    Chaque membre connecte SON compte Google (bouton dans l'Agenda).
-   Un RDV créé/modifié dans le CRM est écrit dans l'agenda Google de la personne qui l'a créé ;
-   si le RDV est affecté à un autre commercial, celui-ci reçoit une invitation (il le voit donc aussi dans son agenda). */
+   CRM → Google : un RDV créé/modifié/supprimé dans le CRM l'est aussi dans l'agenda Google de son « propriétaire »
+     (la personne qui l'a créé) ; le commercial affecté reçoit une invitation. Si un collègue modifie ou supprime
+     ce RDV, l'agenda Google du propriétaire est mis à jour dès que celui-ci ouvre le CRM.
+   Google → CRM : à l'ouverture du CRM puis toutes les 2 minutes, les changements faits dans Google
+     (date, horaire, titre, lieu, suppression) sont repris dans le CRM.
+   Les autres événements Google s'affichent en gris dans l'Agenda (visibles par vous seul) ; un clic permet de
+   les ajouter au CRM. Option « Importer tout mon planning Google » : ajout automatique (visible par l'équipe). */
 const GSCOPE='https://www.googleapis.com/auth/calendar.events';
 const GAPI='https://www.googleapis.com/calendar/v3/calendars/primary/events';
-let gTok=null,gClient=null;
+const GSRC='meyaclo';
+let gTok=null,gClient=null,gSyncing=false,gLastSync=0,gEv={},gLoading={};
 try{gTok=JSON.parse(localStorage.getItem('gtok')||'null')}catch(e){}
 const gValid=()=>gTok&&gTok.exp>Date.now()+60000;
 const gWanted=()=>{try{return !!GOOGLE_CLIENT_ID&&localStorage.getItem('gcal')==='1'}catch(e){return false}};
+const gImportAll=()=>{try{return localStorage.getItem('gimport')==='1'}catch(e){return false}};
+const gMine=e=>!!e?.gcalId&&N(e.gcalOwner)===N(me?.email);
 function gInit(){if(!gClient&&GOOGLE_CLIENT_ID&&window.google?.accounts?.oauth2)gClient=google.accounts.oauth2.initTokenClient({client_id:GOOGLE_CLIENT_ID,scope:GSCOPE,callback:()=>{}});return gClient}
 // À appeler directement depuis un clic (sinon le navigateur bloque la fenêtre Google)
 function gToken(interactive){return new Promise((res,rej)=>{if(gValid())return res(gTok.t);const c=gInit();if(!c)return rej(new Error('Module Google non chargé'));
@@ -148,30 +156,74 @@ async function gFetch(t,url,method,body){const r=await fetch(url,{method,headers
 if(r.status===401){gTok=null;try{localStorage.removeItem('gtok')}catch(e){}}return r}
 const addH=h=>{const[a,b]=h.split(':').map(Number);const m=Math.min(a*60+b+60,1439);return`${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`};
 const nextDay=d=>{const x=new Date(d+'T00:00');x.setDate(x.getDate()+1);return iso(x)};
-function gBody(e){const u=byId('users',e.userId),c=byId('clients',e.clientId),tz=Intl.DateTimeFormat().resolvedOptions().timeZone||'Europe/Paris';
+const gHHMM=d=>`${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+function gTimes(g){if(g.start?.date)return{date:g.start.date,start:'',end:''};const s=new Date(g.start.dateTime),en=new Date(g.end.dateTime);return{date:iso(s),start:gHHMM(s),end:iso(en)===iso(s)?gHHMM(en):''}}
+const gAddr=c=>c?[c.address,c.zip,c.city].filter(Boolean).join(' '):'';
+function gBody(e,metaOnly){const props={extendedProperties:{private:{crmId:e.id,crmSrc:GSRC}}};if(metaOnly)return props;
+const u=byId('users',e.userId),c=byId('clients',e.clientId),tz=Intl.DateTimeFormat().resolvedOptions().timeZone||'Europe/Paris';
 const dt=(d,h)=>({dateTime:`${d}T${h}:00`,timeZone:tz});
-const b={summary:`${e.type?e.type+' · ':''}${e.title}${c?' — '+c.name:''}`,
-location:e.place||(c?[c.address,c.zip,c.city].filter(Boolean).join(' '):''),
-description:[c&&('Client : '+c.name),c?.contact&&('Contact : '+c.contact),(c?.phone||c?.mobile)&&('Tél : '+(c.phone||c.mobile)),u&&('Commercial : '+u.name),e.report&&('\nCompte rendu :\n'+e.report),'\n— Créé depuis le CRM Meyaclo'].filter(Boolean).join('\n'),
-extendedProperties:{private:{crmId:e.id}}};
+const b={summary:`${!e.fromGoogle&&e.type?e.type+' · ':''}${e.title}${c?' — '+c.name:''}`,location:e.place||gAddr(c),...props};
+if(!e.fromGoogle){b.description=[c&&('Client : '+c.name),c?.contact&&('Contact : '+c.contact),(c?.phone||c?.mobile)&&('Tél : '+(c.phone||c.mobile)),u&&('Commercial : '+u.name),e.report&&('\nCompte rendu :\n'+e.report),'\n— Créé depuis le CRM Meyaclo'].filter(Boolean).join('\n');
+if(u?.email&&N(u.email)!==N(me?.email))b.attendees=[{email:u.email}]}
 if(e.start){b.start=dt(e.date,e.start);b.end=dt(e.date,e.end&&e.end>e.start?e.end:addH(e.start))}else{b.start={date:e.date};b.end={date:nextDay(e.date)}}
-if(u?.email&&N(u.email)!==N(me?.email))b.attendees=[{email:u.email}];
 return b}
-async function gPush(e){if(!gWanted()||!e)return;
-if(e.gcalOwner&&N(e.gcalOwner)!==N(me?.email))return; // RDV créé par un collègue : il reste dans son agenda à lui
-let t;try{t=await gToken(false)}catch(err){toast('Google Agenda : reconnectez-vous (bouton dans l\'Agenda).');return}
+// Envoie un RDV du CRM vers Google (création ou mise à jour)
+async function gPush(e,o={}){if(!gWanted()||!e)return;
+if(e.gcalOwner&&N(e.gcalOwner)!==N(me?.email))return; // RDV d'un collègue : son navigateur s'en charge
+let t;try{t=await gToken(false)}catch(err){if(!o.quiet)toast('Google Agenda : reconnectez-vous (bouton dans l\'Agenda).');return}
 try{let r;
-if(e.gcalId){r=await gFetch(t,`${GAPI}/${encodeURIComponent(e.gcalId)}?sendUpdates=all`,'PUT',gBody(e));if(r.status===404||r.status===410)r=null}
+if(e.gcalId){r=await gFetch(t,`${GAPI}/${encodeURIComponent(e.gcalId)}?sendUpdates=${e.fromGoogle?'none':'all'}`,'PATCH',gBody(e,o.meta));if(r.status===404||r.status===410)r=null}
 if(!r)r=await gFetch(t,`${GAPI}?sendUpdates=all`,'POST',gBody(e));
 if(!r.ok)throw new Error((await r.json().catch(()=>({})))?.error?.message||r.status);
-const j=await r.json();if(e.gcalId!==j.id||!e.gcalOwner){e.gcalId=j.id;e.gcalOwner=me.email;await putMany([['events',e]])}
-toast('📅 RDV envoyé dans Google Agenda');return true}
-catch(err){toast('Google Agenda : échec de l\'envoi ('+esc(err.message)+')');return false}}
-async function gDel(e){if(!gWanted()||!e?.gcalId||N(e.gcalOwner)!==N(me?.email))return;
-try{const t=await gToken(false);await gFetch(t,`${GAPI}/${encodeURIComponent(e.gcalId)}?sendUpdates=all`,'DELETE');toast('📅 RDV retiré de Google Agenda')}catch(err){toast('Google Agenda : RDV non supprimé, faites-le à la main.')}}
-/* Lecture du planning Google de la personne connectée, semaine par semaine */
-let gEv={},gLoading={};
-const gHHMM=d=>`${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+const j=await r.json(),cur=byId('events',e.id)||e;
+Object.assign(cur,{gcalId:j.id,gcalOwner:me.email,gcalEtag:j.etag,gcalV:2,gcalSynced:cur.crmUpdated||Date.now()});await putMany([['events',cur]]);
+if(!o.quiet)toast('📅 RDV enregistré dans Google Agenda');return true}
+catch(err){if(!o.quiet)toast('Google Agenda : échec de l\'envoi ('+esc(err.message)+')');return false}}
+async function gDel(e){if(!gWanted()||!gMine(e))return;
+try{const t=await gToken(false);await gFetch(t,`${GAPI}/${encodeURIComponent(e.gcalId)}?sendUpdates=${e.fromGoogle?'none':'all'}`,'DELETE');toast('📅 RDV retiré de Google Agenda')}catch(err){toast('Google Agenda : RDV non supprimé, faites-le à la main.')}}
+// Reprend dans le CRM une modification faite dans Google
+function gApply(e,g){const cur=byId('events',e.id)||e,c=byId('clients',cur.clientId);let t=g.summary||cur.title;
+if(c&&t.endsWith(' — '+c.name))t=t.slice(0,-(' — '+c.name).length);
+if(!cur.fromGoogle&&cur.type&&t.startsWith(cur.type+' · '))t=t.slice((cur.type+' · ').length);
+const loc=g.location||'';
+Object.assign(cur,{title:t,...gTimes(g),place:loc===gAddr(c)?(cur.place||''):loc,gcalEtag:g.etag});cur.crmUpdated=cur.gcalSynced=Date.now();
+putMany([['events',cur]])}
+// Synchronisation complète (sans fenêtre Google : ne tourne que si la connexion est encore valide)
+async function gSync(force){if(!gWanted()||!gValid()||gSyncing||!me||!db.users.length)return;
+if(!force&&Date.now()-gLastSync<60000)return;
+gSyncing=true;gLastSync=Date.now();let changed=0;const t=gTok.t;
+try{
+const from=new Date();from.setDate(from.getDate()-60);from.setHours(0,0,0,0);const fromIso=iso(from);
+const list=async q=>{let out=[],pt='';do{const r=await gFetch(t,`${GAPI}?singleEvents=true&maxResults=2500${q}${pt?'&pageToken='+encodeURIComponent(pt):''}`,'GET');if(!r.ok)throw new Error(r.status);const j=await r.json();out=out.concat(j.items||[]);pt=j.nextPageToken}while(pt);return out};
+const A=await list(`&privateExtendedProperty=${encodeURIComponent('crmSrc='+GSRC)}&timeMin=${encodeURIComponent(from.toISOString())}`);
+const byG=new Map(A.map(g=>[g.id,g]));
+// 1. Mes RDV du CRM présents dans Google
+for(const e of db.events.filter(x=>gMine(x)&&x.date>=fromIso)){
+let g=byG.get(e.gcalId);byG.delete(e.gcalId);
+if(!g){if(e.gcalV!==2){await gPush(e,{quiet:1});continue}
+const r=await gFetch(t,`${GAPI}/${encodeURIComponent(e.gcalId)}`,'GET');
+if(r.status===404||r.status===410){remove('events',e.id);changed++;continue}
+if(!r.ok)continue;g=await r.json();if(g.status==='cancelled'){remove('events',e.id);changed++;continue}}
+const crmNew=(e.crmUpdated||0)>(e.gcalSynced||0),gNew=g.etag!==e.gcalEtag;
+if(gNew&&(!crmNew||Date.parse(g.updated)>(e.crmUpdated||0))){gApply(e,g);changed++}
+else if(crmNew){await gPush(e,{quiet:1});changed++}}
+// 2. RDV supprimés du CRM (par un collègue) mais encore dans mon Google Agenda
+for(const g of byG.values()){const id=g.extendedProperties?.private?.crmId;if(!id||byId('events',id))continue;
+const{data,error}=await sb.from('records').select('id').eq('id',id);if(error||data?.length)continue;
+await gFetch(t,`${GAPI}/${encodeURIComponent(g.id)}?sendUpdates=all`,'DELETE');changed++}
+// 3. Option : importer tout le planning Google (6 prochains mois)
+if(gImportAll()){const d0=new Date();d0.setHours(0,0,0,0);const d1=new Date(d0);d1.setDate(d1.getDate()+180);
+const B=await list(`&timeMin=${encodeURIComponent(d0.toISOString())}&timeMax=${encodeURIComponent(d1.toISOString())}`);
+const known=new Set(db.events.map(e=>e.gcalId).filter(Boolean)),u=myUser();
+for(const g of B){if(g.status==='cancelled'||known.has(g.id)||g.extendedProperties?.private?.crmSrc||(g.eventType&&g.eventType!=='default'))continue;
+const e={id:uid(),title:g.summary||'(sans titre)',type:'Autre',userId:u?.id||'',clientId:'',place:g.location||'',report:'',...gTimes(g),fromGoogle:true,gcalId:g.id,gcalOwner:me.email,crmUpdated:Date.now()};
+db.events.push(e);await putMany([['events',e]]);await gPush(e,{quiet:1,meta:1});changed++}}
+}catch(err){console.warn('Synchro Google Agenda :',err)}
+gSyncing=false;if(changed){gEv={};if(!document.getElementById('modal').innerHTML)render()}}
+setInterval(()=>{if(document.visibilityState==='visible')gSync()},120000);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')gSync()});
+
+/* Affichage du planning Google (événements non présents dans le CRM), semaine par semaine */
 async function gLoadWeek(ws,force){const k=iso(ws);if(!gWanted()||gLoading[k]||(!force&&Array.isArray(gEv[k])))return;
 if(!gValid()){gEv[k]=null;return}
 gLoading[k]=1;
@@ -179,25 +231,30 @@ try{const end=new Date(ws);end.setDate(end.getDate()+7);
 const r=await gFetch(gTok.t,`${GAPI}?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=${encodeURIComponent(ws.toISOString())}&timeMax=${encodeURIComponent(end.toISOString())}`,'GET');
 if(r.status===401){gEv[k]=null}else{if(!r.ok)throw new Error(r.status);const j=await r.json();
 const crmG=new Set(db.events.map(e=>e.gcalId).filter(Boolean)),out=[];
-for(const it of j.items||[]){if(it.status==='cancelled'||crmG.has(it.id)||it.extendedProperties?.private?.crmId)continue;
+for(const it of j.items||[]){if(it.status==='cancelled'||crmG.has(it.id)||it.extendedProperties?.private?.crmId||it.eventType==='workingLocation')continue;
 const base={gid:it.id,title:it.summary||'(sans titre)',place:it.location||'',link:it.htmlLink||''};
 if(it.start?.date){for(let d=new Date(it.start.date+'T00:00');iso(d)<it.end.date;d.setDate(d.getDate()+1))out.push({...base,date:iso(d),start:'',end:'',allDay:1})}
-else if(it.start?.dateTime){const st=new Date(it.start.dateTime),en=new Date(it.end.dateTime);out.push({...base,date:iso(st),start:gHHMM(st),end:iso(en)===iso(st)?gHHMM(en):''})}}
+else if(it.start?.dateTime)out.push({...base,...gTimes(it)})}
 gEv[k]=out}}
 catch(e){gEv[k]=[];toast('Google Agenda : lecture impossible ('+esc(e.message)+')')}
 delete gLoading[k];if(state.view==='agenda'&&iso(state.weekStart)===k)render()}
-function gRefresh(){gToken(false).then(()=>{gEv={};gLoadWeek(state.weekStart,true)}).catch(()=>toast('Google Agenda : reconnectez-vous.'))}
-function gEvLine(g){return`<div class="ev gev" data-href="${esc(g.link)}" onclick="event.stopPropagation();if(this.dataset.href)window.open(this.dataset.href,'_blank')" title="Ouvrir dans Google Agenda"><b>${g.allDay?'Journée':esc(g.start)+(g.end?'–'+esc(g.end):'')}</b> <span class="mute">· Google</span><br>${esc(g.title)}${g.place?'<br><i>'+esc(g.place)+'</i>':''}</div>`}
-function gConnect(){gToken(true).then(()=>{toast('✅ Google Agenda connecté');gEv={};render()}).catch(e=>alert('Connexion Google impossible : '+e.message))}
+function gRefresh(){gToken(false).then(async()=>{gEv={};await gSync(true);gLoadWeek(state.weekStart,true);render()}).catch(()=>toast('Google Agenda : reconnectez-vous.'))}
+function gEvLine(g){return`<div class="ev gev" onclick="event.stopPropagation();gAdd('${esc(g.gid)}','${esc(g.date)}')" title="Cliquez pour l'ajouter au CRM"><b>${g.allDay?'Journée':esc(g.start)+(g.end?'–'+esc(g.end):'')}</b> <span class="mute">· Google</span><br>${esc(g.title)}${g.place?'<br><i>'+esc(g.place)+'</i>':''}</div>`}
+function gAdd(gid,date){const g=(gEv[iso(state.weekStart)]||[]).find(x=>x.gid===gid&&x.date===date);if(!g)return;
+editEvent(null,null,null,{title:g.title,date:g.date,start:g.start,end:g.end,place:g.place,type:'Autre',gcalId:g.gid,link:g.link})}
+function gConnect(){gToken(true).then(async()=>{toast('✅ Google Agenda connecté');gEv={};render();await gSync(true)}).catch(e=>alert('Connexion Google impossible : '+e.message))}
 function gDisconnect(){try{if(gTok&&window.google?.accounts?.oauth2)google.accounts.oauth2.revoke(gTok.t,()=>{});localStorage.removeItem('gtok');localStorage.removeItem('gcal')}catch(e){}gTok=null;gEv={};toast('Google Agenda déconnecté');render()}
+function gSetImport(v){if(v&&!confirm('Tous vos événements Google des 6 prochains mois seront ajoutés au CRM, et donc visibles par toute l\'équipe. Continuer ?'))return render();
+try{localStorage.setItem('gimport',v?'1':'0')}catch(e){}if(v)gRefresh();else render()}
 async function gSyncAll(){const today=iso(new Date()),u=myUser();
 const list=db.events.filter(e=>e.date>=today&&!e.gcalId&&(e.userId===u?.id));
 if(!list.length)return toast('Tous vos RDV à venir sont déjà dans Google Agenda.');
 try{await gToken(false)}catch(e){return toast('Google Agenda : reconnectez-vous.')}
-let n=0;for(const e of list)if(await gPush(e))n++;toast(`📅 ${n} / ${list.length} RDV envoyés dans Google Agenda`);render()}
+let n=0;for(const e of list)if(await gPush(e,{quiet:1}))n++;toast(`📅 ${n} / ${list.length} RDV envoyés dans Google Agenda`);render()}
 function gBar(){if(!GOOGLE_CLIENT_ID)return'<span class="mute">Google Agenda : non configuré</span>';
-return gWanted()?`<span class="gcal"><span class="up">●</span> Google Agenda connecté <button class="ghost" onclick="gRefresh()" title="Recharger mon planning Google">↻</button><button class="ghost" onclick="gSyncAll()">Envoyer mes RDV à venir</button><button class="ghost" onclick="gDisconnect()">Déconnecter</button></span>`
-:`<button class="ghost" onclick="gConnect()">📅 Connecter mon Google Agenda</button>`}
+if(!gWanted())return`<button class="ghost" onclick="gConnect()">📅 Connecter mon Google Agenda</button>`;
+if(!gValid())return`<span class="gcal"><span class="down">●</span> Synchro Google en pause <button onclick="gRefresh()">🔄 Reprendre</button><button class="ghost" onclick="gDisconnect()">Déconnecter</button></span>`;
+return`<span class="gcal"><span class="up">●</span> Google Agenda synchronisé${gSyncing?' <span class="mute">(en cours…)</span>':''} <button class="ghost" onclick="gRefresh()" title="Synchroniser maintenant">↻</button><button class="ghost" onclick="gSyncAll()">Envoyer mes RDV à venir</button><label class="chip" style="margin:0" title="Ajoute au CRM tous vos événements Google des 6 prochains mois (visibles par l'équipe)"><input type="checkbox" ${gImportAll()?'checked':''} onchange="gSetImport(this.checked)">Importer tout mon planning</label><button class="ghost" onclick="gDisconnect()">Déconnecter</button></span>`}
 
 /* ---------- Calculs ---------- */
 const ok=o=>o.status!=='Annulée';
@@ -301,7 +358,7 @@ const gl=gWanted()&&state.showG!==false&&Array.isArray(gEv[gk])?gEv[gk]:[];
 const gChip=gWanted()?`<label class="chip"><input type="checkbox" ${state.showG!==false?'checked':''} onchange="state.showG=this.checked;render()"><span class="dot" style="background:#9aa3b2"></span>Mon planning Google${gLoading[gk]?' <span class="mute">(chargement…)</span>':''}</label>${gEv[gk]===null?'<button class="ghost" onclick="gRefresh()">🔄 Afficher mon planning Google</button>':''}`:'';
 return`<h2>Agenda équipe</h2><div class="bar"><button class="ghost" onclick="shiftWeek(-7)">←</button><button class="ghost" onclick="state.weekStart=monday(new Date());render()">Aujourd'hui</button><button class="ghost" onclick="shiftWeek(7)">→</button><b>Semaine du ${days[0].toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}</b><span style="flex:1"></span>${gBar()}<button onclick="editEvent()">+ Rendez-vous</button></div>
 <div class="bar">${db.users.map(u=>`<label class="chip"><input type="checkbox" ${state.hiddenUsers.includes(u.id)?'':'checked'} onchange="toggleUser('${u.id}')"><span class="dot" style="background:${u.color}"></span>${esc(u.name)}</label>`).join('')}${gChip}</div>
-<div class="week">${days.map(d=>{const k=iso(d);return`<div class="day ${k===today?'today':''}" ondblclick="editEvent(null,null,'${k}')"><h4>${d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'short'})}</h4>${[...vis.filter(e=>e.date===k).map(e=>({s:e.start||'',h:(()=>{const u=byId('users',e.userId),c=byId('clients',e.clientId);return`<div class="ev" style="border-color:${u?.color||'#999'}" onclick="event.stopPropagation();editEvent('${e.id}')"><b>${e.start||''}${e.end?'–'+e.end:''}</b> ${esc(e.type)}${e.gcalId?' 📅':''}<br>${esc(e.title)}${c?'<br><i>'+esc(c.name)+'</i>':''}<br><span class="mute">${esc(u?.name)}</span></div>`})()})),...gl.filter(g=>g.date===k).map(g=>({s:g.start,h:gEvLine(g)}))].sort((a,b)=>a.s.localeCompare(b.s)).map(x=>x.h).join('')}</div>`}).join('')}</div><p class="mute">Double-cliquez sur un jour pour ajouter un rendez-vous. 📅 = présent dans Google Agenda. En gris pointillé : votre planning Google (cliquez pour l'ouvrir). Pour qu'un collègue reçoive l'invitation, renseignez son e-mail Gmail dans Équipe.</p>`}
+<div class="week">${days.map(d=>{const k=iso(d);return`<div class="day ${k===today?'today':''}" ondblclick="editEvent(null,null,'${k}')"><h4>${d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'short'})}</h4>${[...vis.filter(e=>e.date===k).map(e=>({s:e.start||'',h:(()=>{const u=byId('users',e.userId),c=byId('clients',e.clientId);return`<div class="ev" style="border-color:${u?.color||'#999'}" onclick="event.stopPropagation();editEvent('${e.id}')"><b>${e.start||''}${e.end?'–'+e.end:''}</b> ${esc(e.type)}${e.gcalId?' 📅':''}<br>${esc(e.title)}${c?'<br><i>'+esc(c.name)+'</i>':''}<br><span class="mute">${esc(u?.name)}</span></div>`})()})),...gl.filter(g=>g.date===k).map(g=>({s:g.start,h:gEvLine(g)}))].sort((a,b)=>a.s.localeCompare(b.s)).map(x=>x.h).join('')}</div>`}).join('')}</div><p class="mute">Double-cliquez sur un jour pour ajouter un rendez-vous. 📅 = présent dans Google Agenda. En gris pointillé : votre planning Google, visible par vous seul (cliquez pour l'ajouter au CRM). Pour qu'un collègue reçoive l'invitation, renseignez son e-mail Gmail dans Équipe.</p>`}
 function shiftWeek(n){const d=new Date(state.weekStart);d.setDate(d.getDate()+n);state.weekStart=d;render()}
 function toggleUser(id){const h=state.hiddenUsers;state.hiddenUsers=h.includes(id)?h.filter(x=>x!==id):[...h,id];render()}
 
@@ -419,13 +476,15 @@ form(id?'Modifier la commande':'Nouvelle commande',[
 {k:'notes',l:'Notes',t:'area'}],
 id?byId('orders',id):{clientId,date:iso(new Date()),status:'Prise',season:state.season,userId:me_u?.id},d=>{d.season=(d.season||'').toUpperCase().replace(/\s/g,'');d.date=d.date||seasonDate(d.season);upsert('orders',id,d)},id?()=>remove('orders',id):null)}
 
-function editEvent(id,clientId,date){
+function editEvent(id,clientId,date,pre){
 const ev=id?byId('events',id):null;
 let gInfo='';
-if(GOOGLE_CLIENT_ID){if(!gWanted())gInfo='<p class="mute">📅 Connectez votre Google Agenda (bouton dans l\'Agenda) pour que ce RDV y apparaisse automatiquement.</p>';
-else if(ev?.gcalOwner&&N(ev.gcalOwner)!==N(me?.email))gInfo=`<p class="mute">📅 Ce RDV est dans l'agenda Google de ${esc(ev.gcalOwner)} : ses modifications Google se font de son côté.</p>`;
-else gInfo='<p class="mute">📅 Sera enregistré dans votre Google Agenda (le commercial affecté reçoit une invitation).</p>'}
-form(id?'Modifier le rendez-vous':'Nouveau rendez-vous',[
+if(pre?.link)gInfo+=`<p><a href="${esc(pre.link)}" target="_blank">Ouvrir dans Google Agenda ↗</a></p>`;
+if(GOOGLE_CLIENT_ID){if(!gWanted())gInfo+='<p class="mute">📅 Connectez votre Google Agenda (bouton dans l\'Agenda) pour que ce RDV y apparaisse automatiquement.</p>';
+else if(ev?.gcalOwner&&N(ev.gcalOwner)!==N(me?.email))gInfo+=`<p class="mute">📅 Ce RDV est dans l'agenda Google de ${esc(ev.gcalOwner)} : il y sera mis à jour à sa prochaine ouverture du CRM.</p>`;
+else if(pre)gInfo+='<p class="mute">📅 Cet événement Google sera ajouté au CRM (visible par l\'équipe) et restera synchronisé avec votre Google Agenda.</p>';
+else gInfo+='<p class="mute">📅 Synchronisé avec votre Google Agenda (le commercial affecté reçoit une invitation).</p>'}
+form(pre?'Ajouter au CRM':id?'Modifier le rendez-vous':'Nouveau rendez-vous',[
 {k:'title',l:'Objet *',req:1},
 {k:'type',l:'Type',t:'select',o:['RDV client','Présentation collection','Salon','Showroom','Appel','Livraison','Autre'].map(s=>[s,s])},
 {k:'date',l:'Date',t:'date',req:1},{k:'start',l:'Début',t:'time'},{k:'end',l:'Fin',t:'time'},
@@ -433,8 +492,8 @@ form(id?'Modifier le rendez-vous':'Nouveau rendez-vous',[
 {k:'clientId',l:'Client (optionnel)',t:'select',o:[['','—'],...sortedClients().map(c=>[c.id,c.name+(c.city?' — '+c.city:'')])]},
 {k:'place',l:'Lieu'},
 {k:'report',l:'Compte rendu',t:'area'}],
-ev||{clientId:clientId||'',date:date||iso(new Date()),start:'10:00',end:'11:00',type:'RDV client',userId:myUser()?.id},
-d=>{const o=upsert('events',id,d);gPush(o)},
+ev||{clientId:clientId||'',date:date||iso(new Date()),start:'10:00',end:'11:00',type:'RDV client',userId:myUser()?.id,...(pre||{})},
+d=>{d.crmUpdated=Date.now();const o=upsert('events',id,pre?{...d,gcalId:pre.gcalId,gcalOwner:me.email,fromGoogle:true}:d);if(pre)gEv={};gPush(o)},
 id?()=>{gDel(byId('events',id));remove('events',id)}:null,gInfo)}
 
 function editBrand(id){form(id?'Modifier la marque':'Nouvelle marque',[{k:'name',l:'Marque *',req:1},{k:'commission',l:'Taux de commission (%)',t:'number'},{k:'contact',l:'Contact marque'},{k:'notes',l:'Notes',t:'area'}],
