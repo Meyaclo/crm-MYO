@@ -54,6 +54,36 @@ input,select,textarea{border:1px solid var(--line);border-radius:6px;padding:7px
 .gcal{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:6px;padding:4px 8px;background:#fff}
 #toast{position:fixed;bottom:18px;right:18px;background:#152238;color:#fff;padding:10px 14px;border-radius:8px;font-size:13px;z-index:20;display:none;max-width:340px}
 #implog{font-size:13px;margin-top:10px;line-height:1.5}
+.ch{display:flex;align-items:center;gap:16px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:18px 22px;margin-bottom:14px}
+.av{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,#152238,var(--accent));color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:20px;flex-shrink:0}
+.av.sm{width:42px;height:42px;font-size:16px;background:var(--accent2);color:var(--accent)}
+.ch h2{margin:0;font-size:22px;text-transform:uppercase}.ch .sub{color:var(--mute);margin-top:4px}
+.ibtn{background:#fff;color:var(--ink);border:1px solid var(--line);min-width:34px;height:34px;padding:0 8px;border-radius:8px;font-size:15px;margin-left:4px}
+.ibtn:hover{background:var(--accent2)}.ibtn.red{color:var(--danger)}.ibtn.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.ck{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px}
+.ck>div{background:#fff;border:1px solid var(--line);border-top:3px solid var(--c);border-radius:10px;padding:14px 16px;min-width:0}
+.ck span{font-size:11px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--mute)}
+.ck b{display:block;font-size:20px;color:var(--c);margin:6px 0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ck small{color:var(--mute);font-size:12px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:16px;overflow-x:auto}
+.tabs a{padding:10px 14px;cursor:pointer;color:var(--mute);border-bottom:2px solid transparent;white-space:nowrap}
+.tabs a.on{color:var(--accent);border-color:var(--accent);font-weight:600}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.kv>span:first-child{color:var(--mute);white-space:nowrap}.kv>span:last-child{text-align:right;word-break:break-word}
+.badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600;white-space:nowrap}
+.b-ok{background:#e8f5ec;color:#1e8449}.b-no{background:#fdecea;color:var(--danger)}.b-mid{background:#fff4e0;color:#b9770e}.b-grey{background:#eef0f3;color:var(--mute)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.pc{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px}
+.sbar{display:inline-block;height:6px;background:#eef0f3;border-radius:5px;overflow:hidden;width:100%;vertical-align:middle}.sbar div{height:100%;background:var(--accent);border-radius:5px}
+details.ms{position:relative;display:inline-block}
+details.ms summary{list-style:none;cursor:pointer;border:1px solid var(--accent);color:var(--accent);border-radius:6px;padding:7px 10px;background:#fff}
+details.ms summary::-webkit-details-marker{display:none}
+details.ms .dd{position:absolute;z-index:5;background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px;margin-top:4px;min-width:190px;max-height:320px;overflow:auto;box-shadow:0 4px 14px rgba(0,0,0,.12)}
+details.ms label{display:flex;gap:8px;padding:4px 6px;cursor:pointer}
+tr.tot td{font-weight:700;background:#fafbfc}
+.sq{width:10px;height:10px;border-radius:3px;display:inline-block;margin-right:8px}
+.modal .box.wide{width:min(760px,94vw)}.box.wide form{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}.box.wide .bar,.box.wide .f.full{grid-column:1/-1}
+@media(max-width:800px){.box.wide form{grid-template-columns:1fr}.ch{flex-wrap:wrap}}
 .cal{display:grid;grid-template-columns:240px minmax(0,1fr);height:calc(100vh - 48px);background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;color:#3c4043}
 .cal-side{padding:14px 16px;border-right:1px solid var(--line);overflow:auto}
 .cal-create{display:inline-flex;align-items:center;gap:12px;background:#fff;color:#3c4043;border-radius:16px;padding:12px 24px 12px 16px;font-size:14px;font-weight:500;box-shadow:0 1px 2px rgba(60,64,67,.3),0 2px 6px 2px rgba(60,64,67,.15);margin-bottom:18px}
@@ -395,16 +425,125 @@ ${shown.map(c=>{const a=m.get(c.id)||Z;return`<tr class="click" onclick="go('cli
 function ordersTable(os,showClient=true){return os.length?`<table><tr><th>Saison</th>${showClient?'<th>Client</th>':''}<th>Marque</th><th>Type</th><th>Commercial</th><th>Statut</th><th class="n">Objectif</th><th class="n">Réalisé HT</th><th class="n">N-1</th><th class="n">Commission</th></tr>${os.map(o=>`<tr class="click" onclick="editOrder('${o.id}')"><td>${esc(o.season)}</td>${showClient?`<td>${esc(byId('clients',o.clientId)?.name)}</td>`:''}<td>${esc(byId('brands',o.brandId)?.name)}</td><td>${esc(o.type)}</td><td>${esc(byId('users',o.userId)?.name)}</td><td>${esc(o.status)}</td><td class="n">${o.objective?eur(+o.objective):''}</td><td class="n">${eur(+o.amount)}</td><td class="n">${o.n1?eur(+o.n1):''}</td><td class="n">${eur(comm(o))}</td></tr>`).join('')}</table>`:'<p class="mute">Aucune commande.</p>'}
 const orderSort=(a,b)=>sVal(b.season)-sVal(a.season)||(b.date||'').localeCompare(a.date||'')||(+b.amount||0)-(+a.amount||0);
 
+/* ---------- Fiche client (onglets) ---------- */
+function seasonOfDate(d){if(!d)return'';const y=+d.slice(0,4),m=+d.slice(5,7);return m>=6?'SS'+String(y+1-2000).padStart(2,'0'):'FW'+String(y-2000).padStart(2,'0')}
+function sShift(s,n){const v=sVal(s);if(!v)return s;const t=v+n*.5,y=Math.floor(t);return(t%1?'FW':'SS')+String(y-2000).padStart(2,'0')}
+const SEASON_NOW=seasonOfDate(iso(new Date()));
+const evSeason=e=>e.season||seasonOfDate(e.date);
+const eur2=n=>(+n||0).toLocaleString('fr-FR',{style:'currency',currency:'EUR'});
+const fmtD=d=>d?new Date(d+'T00:00').toLocaleDateString('fr-FR'):'';
+const cSeasonsDefault=()=>[sShift(SEASON_NOW,1),SEASON_NOW,sShift(SEASON_NOW,-1)];
+const cSel=()=>state.cSeasons??cSeasonsDefault();
+const inSel=s=>{const a=cSel();return!a.length||a.includes(s)};
+function cToggleSeason(s){const a=[...cSel()],i=a.indexOf(s);if(i>=0)a.splice(i,1);else a.push(s);state.cSeasons=a.sort((x,y)=>sVal(y)-sVal(x));render()}
+function seasonFilter(all){const sel=cSel(),opts=[...new Set([...all.filter(Boolean),...cSeasonsDefault()])].sort((a,b)=>sVal(b)-sVal(a));
+return`<details class="ms" ${state.msOpen?'open':''} ontoggle="state.msOpen=this.open"><summary>Saison : ${sel.length?esc(sel.join(', ')):'toutes'} ▾</summary><div class="dd">${opts.map(s=>`<label><input type="checkbox" ${sel.includes(s)?'checked':''} onchange="cToggleSeason('${esc(s)}')">${esc(s)}</label>`).join('')}<div style="border-top:1px solid var(--line);margin-top:6px;padding-top:6px;font-size:12px"><a onclick="state.cSeasons=[];render()" style="cursor:pointer;color:var(--accent)">Toutes les saisons</a> · <a onclick="state.cSeasons=null;render()" style="cursor:pointer;color:var(--accent)">Par défaut</a></div></div></details>`}
+const kv=(l,v)=>`<div class="kv"><span>${l}</span><span>${v||'<span class="mute">—</span>'}</span></div>`;
+const link=(v,base)=>{if(!v)return'';const u=/^https?:/i.test(v)?v:(base?base+v.replace(/^@/,''):'https://'+v);return`<a href="${esc(u)}" target="_blank">${esc(v)}</a>`};
+const tel=v=>v?`<a href="tel:${esc(v)}">${esc(v)}</a>`:'';
+const BST=[['Travaillée','b-ok'],['En discussion','b-mid'],['Prospect','b-grey'],['Plus commandée','b-mid'],['Pas intéressé','b-no'],['Arrêtée','b-no']];
+const badge=(s,cls)=>s?`<span class="badge ${cls||(BST.find(x=>x[0]===s)||[,'b-grey'])[1]}">${esc(s)}</span>`:'';
+const OST={'Prise':'b-grey','Confirmée':'b-mid','Livrée':'b-ok','Facturée':'b-ok','Annulée':'b-no'};
+
+function cContacts(c){if(Array.isArray(c.contacts))return c.contacts;return c.contact||c.mobile||c.email?[{id:'p',name:c.contact||'',role:'',phone:c.mobile||c.phone||'',email:c.email||'',main:true}]:[]}
+function saveContacts(c,list){if(list.length&&!list.some(x=>x.main))list[0].main=true;c.contacts=list;c.contact=list.find(x=>x.main)?.name||'';putMany([['clients',c]])}
+function editContact(cid,kid){const c=byId('clients',cid),list=cContacts(c).map(x=>({...x})),k=kid?list.find(x=>x.id===kid):null;
+form(k?'Modifier l\'interlocuteur':'Nouvel interlocuteur',[{k:'name',l:'Nom *',req:1},{k:'role',l:'Fonction (gérant, acheteur…)'},{k:'phone',l:'Téléphone',t:'tel'},{k:'email',l:'E-mail',t:'email'},{k:'main',l:'Interlocuteur principal',t:'select',o:[['','Non'],['1','Oui']]}],
+k?{...k,main:k.main?'1':''}:{main:list.length?'':'1'},
+d=>{const o={...(k||{id:uid()}),...d,main:!!d.main};if(o.main)list.forEach(x=>x.main=false);if(k)Object.assign(k,o);else list.push(o);saveContacts(c,list)},
+k?()=>saveContacts(c,list.filter(x=>x.id!==kid)):null)}
+function editBrandLink(cid,bid){const c=byId('clients',cid),L={...(c.brandLinks||{})},cur=bid?L[bid]||{}:{};
+form(bid?'Marque — '+esc(byId('brands',bid)?.name):'Ajouter une marque',[...(bid?[]:[{k:'brandId',l:'Marque',t:'select',o:[...db.brands].sort((a,b)=>a.name.localeCompare(b.name)).map(b=>[b.id,b.name])}]),
+{k:'status',l:'Statut',t:'select',o:[['','Automatique (selon les commandes)'],...BST.map(x=>[x[0],x[0]])]},{k:'comment',l:'Commentaire',t:'area'}],cur,
+d=>{L[bid||d.brandId]={status:d.status,comment:d.comment};c.brandLinks=L;putMany([['clients',c]])},
+bid&&L[bid]?()=>{delete L[bid];c.brandLinks=L;putMany([['clients',c]])}:null)}
+function editComment(cid){const c=byId('clients',cid);form('Commentaire',[{k:'notes',l:'Commentaire',t:'area'}],c,d=>{c.notes=d.notes;putMany([['clients',c]])})}
+function toggleVisited(cid){const c=byId('clients',cid);c.visited=c.visited==='Oui'?'Non':'Oui';putMany([['clients',c]]);render()}
+function cHq(cid){const c=byId('clients',cid);go('clients',{q:c.hq||'',fActive:'',from:''})}
+function cDelete(id){if(db.orders.some(o=>o.clientId===id))return alert('Ce client a des commandes : supprimez-les d\'abord.');if(!confirm('Supprimer définitivement ce client ?'))return;remove('clients',id);go('clients',{from:''})}
+function setEvStatus(id,s){const e=byId('events',id);if(!e)return;e.status=e.status===s?'':s;putMany([['events',e]]);render()}
+function delOrder(id){if(confirm('Supprimer cette commande ?')){remove('orders',id);render()}}
+function cTab(t){state.ctab=t;state.msOpen=false;render()}
+function cOpenB(id){const s=state.openB||(state.openB={});s[id]=!s[id];render()}
+function exportClient(cid){if(typeof XLSX==='undefined')return alert('Module Excel non chargé (connexion internet requise).');const c=byId('clients',cid),wb=XLSX.utils.book_new(),add=(n,r)=>XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(r.length?r:[{}]),n);
+add('Fiche',[{Enseigne:c.name,Adresse:c.address,CP:c.zip,Ville:c.city,Département:c.dept,Secteur:c.sector,'Tél. fixe':c.phone,'Tél. mobile':c.mobile,Email:c.email,Instagram:c.instagram,Facebook:c.facebook,'Site web':c.website,Emplacement:c.location,Surface:c.surface,'Année ouverture':c.openYear,Univers:c.universe,'Magasin visité':c.visited,SIRET:c.siret,'N° TVA':c.vat,'Capital social':c.capital,'Année création':c.creationYear,Dirigeant:c.manager,'Nb établissements':c.nbShops,'Score solvabilité':c.solvency,'Siège social':c.hq,Commentaire:c.notes}]);
+add('Interlocuteurs',cContacts(c).map(k=>({Nom:k.name,Fonction:k.role,Téléphone:k.phone,Email:k.email,Principal:k.main?'Oui':''})));
+add('Commandes',db.orders.filter(o=>o.clientId===cid).sort(orderSort).map(o=>({Saison:o.season,'Date commande':o.date,'Date livraison':o.delivery,Marque:byId('brands',o.brandId)?.name,Type:o.type,Pièces:+o.pieces||'',  'Montant HT':+o.amount||0,Statut:o.status})));
+add('Rendez-vous',db.events.filter(e=>e.clientId===cid).sort((a,b)=>b.date.localeCompare(a.date)).map(e=>({Saison:evSeason(e),Date:e.date,Début:e.start,Fin:e.end,Objet:e.title,Marque:byId('brands',e.brandId)?.name||'',Type:e.orderType||'',Commercial:byId('users',e.userId)?.name,Statut:e.status||'','Compte rendu':e.report})));
+XLSX.writeFile(wb,`Fiche_${(c.name||'client').replace(/[^\w-]+/g,'_')}_${iso(new Date())}.xlsx`)}
+
 function vClient(){const c=byId('clients',state.clientId);if(!c){state.view='clients';return vClients()}
-const os=db.orders.filter(o=>o.clientId===c.id).sort(orderSort);
-const ss=[...new Set(os.map(o=>o.season).filter(Boolean))].sort((a,b)=>sVal(b)-sVal(a)).slice(0,5);
-const bs=db.brands.filter(b=>os.some(o=>o.brandId===b.id));
-const evs=db.events.filter(e=>e.clientId===c.id).sort((a,b)=>b.date.localeCompare(a.date));
-return`<div class="bar">${state.from==='agenda'?`<button class="ghost" onclick="go('agenda',{from:''})">← Agenda</button>`:''}<button class="ghost" onclick="go('clients',{from:''})">← Clients</button><h2 style="margin:0;flex:1">${esc(c.name)}</h2><button onclick="editOrder(null,'${c.id}')">+ Commande</button><button onclick="editEvent(null,'${c.id}')">+ RDV</button><button class="ghost" onclick="editClient('${c.id}')">Modifier</button></div>
-<div class="grid2"><div class="card"><h3>Fiche</h3><p>${esc(c.address)}<br>${esc(c.zip)} ${esc(c.city)} ${c.dept?'('+esc(c.dept)+')':''}${c.sector?'<br><span class="mute">'+esc(c.sector)+'</span>':''}</p><p>Contact : ${esc(c.contact)}<br>Tél : ${c.phone?`<a href="tel:${esc(c.phone)}">${esc(c.phone)}</a>`:''}${c.mobile?`<br>Portable : <a href="tel:${esc(c.mobile)}">${esc(c.mobile)}</a>`:''}<br>E-mail : ${c.email?`<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>`:''}</p>${c.hq&&c.hq!==c.name?`<p class="mute">Siège : ${esc(c.hq)}</p>`:''}${c.siret?`<p class="mute">SIRET ${esc(c.siret)}</p>`:''}<p style="white-space:pre-wrap">${esc(c.notes)}</p></div>
-<div class="card"><h3>CA par marque et par saison</h3>${bs.length?`<table><tr><th>Marque</th>${ss.map(s=>`<th class="n">${esc(s)}</th>`).join('')}</tr>${bs.map(b=>`<tr><td>${esc(b.name)}</td>${ss.map(s=>{const v=ca(o=>o.clientId===c.id&&o.brandId===b.id&&o.season===s);return`<td class="n">${v?eur(v):''}</td>`}).join('')}</tr>`).join('')}<tr><th>Total</th>${ss.map(s=>`<th class="n">${eur(ca(o=>o.clientId===c.id&&o.season===s))}</th>`).join('')}</tr></table>`:'<p class="mute">Pas encore de commande.</p>'}</div></div>
-<div class="card"><h3>Commandes</h3>${ordersTable(os,false)}</div>
-<div class="card"><h3>Rendez-vous & comptes rendus</h3>${evs.map(evLine).join('')||'<p class="mute">Aucun.</p>'}</div>`}
+if(state._cid!==c.id){state._cid=c.id;state.ctab='info';state.msOpen=false;state.openB={};state.caS=''}
+const os=db.orders.filter(o=>o.clientId===c.id),oks=os.filter(o=>ok(o)&&+o.amount),sum=a=>a.reduce((s,o)=>s+(+o.amount||0),0);
+const tot=sum(oks),bm=new Map();oks.forEach(o=>bm.set(o.brandId,(bm.get(o.brandId)||0)+(+o.amount)));
+const top=[...bm.entries()].sort((a,b)=>b[1]-a[1])[0];
+const now=new Date(),td=iso(now),hm=gHHMM(now),evs=db.events.filter(e=>e.clientId===c.id);
+const nx=evs.filter(e=>e.status!=='Annulé'&&(e.date>td||(e.date===td&&(e.start||'99')>=hm))).sort((a,b)=>(a.date+(a.start||'')).localeCompare(b.date+(b.start||'')))[0];
+const ini=(c.name||'?').split(/\s+/).filter(w=>/[A-Za-z0-9À-ÿ]/.test(w)).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+const K=(col,l,v,s)=>`<div style="--c:${col}"><span>${l}</span><b title="${esc(v)}">${esc(v)}</b><small>${esc(s)}</small></div>`;
+const TABS=[['info','Informations'],['contacts','Interlocuteurs'],['brands','Marques'],['orders','Commandes'],['rdv','Rendez-vous'],['ca','Chiffre d\'affaires']];
+const T=state.ctab||'info';let body='';
+
+if(T==='info'){const solv=c.solvency!==undefined&&c.solvency!=='';const sv=Math.max(0,Math.min(100,+c.solvency||0));
+body=`<div class="grid2"><div class="card"><h3>Coordonnées & magasin</h3>
+${kv('Adresse',[esc(c.address),[esc(c.zip),esc(c.city)].filter(Boolean).join(' ')].filter(Boolean).join('<br>'))}${kv('Département',esc(c.dept))}${kv('Pays',esc(c.country))}${kv('Secteur',esc(c.sector))}
+${kv('Tél. fixe',tel(c.phone))}${kv('Tél. mobile',tel(c.mobile))}${kv('Email',c.email?`<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>`:'')}
+${kv('Instagram',link(c.instagram,'https://instagram.com/'))}${kv('Facebook',link(c.facebook,'https://facebook.com/'))}${kv('Site web',link(c.website))}
+${kv('Emplacement',esc(c.location))}${kv('Surface commerciale',c.surface?esc(c.surface)+' m²':'')}${kv('Année d\'ouverture',esc(c.openYear))}${kv('Univers',esc(c.universe))}
+${kv('Magasin visité',`<a onclick="toggleVisited('${c.id}')" style="cursor:pointer" title="Cliquer pour changer">${c.visited==='Oui'?badge('● Oui','b-ok'):badge('● Non','b-no')}</a>`)}</div>
+<div><div class="card"><h3>Société</h3>${kv('SIRET',esc(c.siret))}${kv('N° TVA',esc(c.vat))}${kv('Capital social',c.capital?esc(c.capital)+(/^\d[\d\s.,]*$/.test(c.capital)?' €':''):'')}${kv('Année de création',esc(c.creationYear))}${kv('Dirigeant',esc(c.manager))}${kv('Nb établissements',esc(c.nbShops))}
+${kv('Score solvabilité',solv?`<span style="display:inline-flex;align-items:center;gap:10px"><span class="sbar" style="width:110px"><div style="width:${sv}%;background:${sv>=60?'#1e8449':sv>=30?'#d68910':'var(--danger)'}"></div></span><b class="${sv>=60?'up':'down'}">${sv}/100</b></span>`:'')}
+${kv('Siège social',c.hq?`<a onclick="cHq('${c.id}')" style="cursor:pointer;color:var(--accent);text-decoration:underline" title="Voir les magasins de ce siège">${esc(c.hq)}</a>`:'')}</div>
+<div class="card"><div class="bar" style="justify-content:space-between;margin:0 0 8px"><h3 style="margin:0">Commentaire</h3><button class="ibtn" title="Modifier" onclick="editComment('${c.id}')">✏️</button></div><p style="white-space:pre-wrap;margin:0" class="${c.notes?'':'mute'}">${esc(c.notes)||'Aucun commentaire'}</p></div></div></div>`}
+
+if(T==='contacts'){const L=cContacts(c);
+body=`<div class="bar" style="justify-content:space-between"><span class="mute">${L.length} interlocuteur${L.length>1?'s':''}</span><button onclick="editContact('${c.id}')">+ Ajouter un interlocuteur</button></div>
+<div class="cards">${L.map(k=>`<div class="pc"><div style="display:flex;gap:12px;align-items:center"><div class="av sm">${esc((k.name||'?').trim()[0]||'?').toUpperCase()}</div><div style="flex:1"><b>${esc(k.name)}</b>${k.role?`<div class="mute">${esc(k.role)}</div>`:''}</div>${k.main?'<span class="badge b-grey">Principal</span>':''}</div>
+<div style="border-top:1px solid var(--line);margin:12px 0;padding-top:10px;line-height:1.9">${k.phone?'📞 '+tel(k.phone)+'<br>':''}${k.email?'✉️ '+esc(k.email):''}</div>
+<div class="bar" style="margin:0">${k.email?`<a href="mailto:${esc(k.email)}"><button class="ghost">✉️ Email</button></a>`:''}<button class="ibtn" title="Modifier" onclick="editContact('${c.id}','${k.id}')">✏️</button><button class="ibtn red" title="Supprimer" onclick="if(confirm('Supprimer cet interlocuteur ?')){const c=byId('clients','${c.id}');saveContacts(c,cContacts(c).filter(x=>x.id!=='${k.id}'));render()}">🗑️</button></div></div>`).join('')||'<p class="mute">Aucun interlocuteur.</p>'}</div>`}
+
+if(T==='brands'){const Lk=c.brandLinks||{},ids=[...new Set([...os.map(o=>o.brandId),...Object.keys(Lk)])];
+const rows=ids.map(id=>{const b=byId('brands',id);if(!b)return null;const bo=oks.filter(o=>o.brandId===id),ss=[...new Set(bo.map(o=>o.season).filter(Boolean))].sort((a,b)=>sVal(b)-sVal(a)),inF=ss.filter(inSel);
+if(!inF.length&&!Lk[id])return null;
+const auto=bo.length?(sVal(ss[0])>=sVal(sShift(SEASON_NOW,-1))?'Travaillée':'Plus commandée'):'Prospect';
+return{b,ss:inF.length?inF:ss,st:Lk[id]?.status||auto,cm:Lk[id]?.comment||'',ca:sum(bo.filter(o=>inSel(o.season)))}}).filter(Boolean).sort((a,b)=>a.b.name.localeCompare(b.b.name));
+body=`<div class="bar"><span class="mute">${rows.length} marque${rows.length>1?'s':''}</span>${seasonFilter([...os.map(o=>o.season),...evs.map(evSeason)])}<span style="flex:1"></span><button onclick="editBrandLink('${c.id}')">+ Ajouter des marques</button></div>
+<div class="card"><table><tr><th>Marque</th><th>Statut</th><th>Saison</th><th class="n">CA (saisons filtrées)</th><th>Commentaire</th><th></th></tr>${rows.map(r=>{const op=state.openB?.[r.b.id]&&r.ss.length>1;
+return`<tr><td>${r.ss.length>1?`<a onclick="cOpenB('${r.b.id}')" style="cursor:pointer">${op?'▾':'▸'} <b>${esc(r.b.name)}</b> <span class="mute">(${r.ss.length} saisons)</span></a>`:`<b>${esc(r.b.name)}</b>`}</td><td>${badge(r.st)}</td><td>${esc(r.ss[0]||'—')}</td><td class="n">${r.ca?eur2(r.ca):''}</td><td>${esc(r.cm)}</td><td class="n"><button class="ibtn" title="Statut / commentaire" onclick="editBrandLink('${c.id}','${r.b.id}')">✏️</button></td></tr>`
++(op?r.ss.map(s=>`<tr style="background:#fafbfc"><td style="padding-left:32px" class="mute">${esc(r.b.name)}</td><td></td><td>${esc(s)}</td><td class="n">${eur2(sum(oks.filter(o=>o.brandId===r.b.id&&o.season===s)))}</td><td></td><td></td></tr>`).join(''):'')}).join('')||'<tr><td colspan="6" class="mute">Aucune marque sur ces saisons.</td></tr>'}</table></div>
+<p class="mute">Statut automatique : « Travaillée » si commandes sur la saison en cours ou la précédente, « Plus commandée » sinon. Le crayon permet de le forcer et d'ajouter un commentaire.</p>`}
+
+if(T==='orders'){const L=os.filter(o=>inSel(o.season)).sort((a,b)=>(b.date||'').localeCompare(a.date||'')||sVal(b.season)-sVal(a.season));const v=L.filter(ok);
+body=`<div class="bar"><span class="mute">${L.length} commande${L.length>1?'s':''}</span>${seasonFilter(os.map(o=>o.season))}<span style="flex:1"></span><button onclick="editOrder(null,'${c.id}')">+ Nouvelle commande</button></div>
+<div class="card"><table><tr><th>Saison</th><th>Date commande</th><th>Date livraison</th><th>Marque</th><th>Type</th><th>Commercial</th><th class="n">Pièces</th><th class="n">Montant HT</th><th>Statut</th><th></th></tr>
+${L.map(o=>`<tr class="click" onclick="editOrder('${o.id}')"><td>${esc(o.season)}</td><td>${fmtD(o.date)}</td><td>${fmtD(o.delivery)}</td><td>${esc(byId('brands',o.brandId)?.name)}</td><td>${esc(o.type)}</td><td>${esc(byId('users',o.userId)?.name)}</td><td class="n">${o.pieces?esc(o.pieces):''}</td><td class="n">${eur2(o.amount)}</td><td>${badge(o.status,OST[o.status])}</td><td class="n"><button class="ibtn red" title="Supprimer" onclick="event.stopPropagation();delOrder('${o.id}')">🗑️</button></td></tr>`).join('')||'<tr><td colspan="10" class="mute">Aucune commande sur ces saisons.</td></tr>'}
+${L.length?`<tr class="tot"><td colspan="6">Totaux</td><td class="n">${v.reduce((s,o)=>s+(+o.pieces||0),0)||''}</td><td class="n">${eur2(sum(v))}</td><td colspan="2"></td></tr>`:''}</table></div>`}
+
+if(T==='rdv'){const L=evs.filter(e=>inSel(evSeason(e))).sort((a,b)=>(b.date+(b.start||'')).localeCompare(a.date+(a.start||'')));
+const sb=(e,s,ic,t)=>`<button class="ibtn${e.status===s?' on':''}" title="${t}" onclick="event.stopPropagation();setEvStatus('${e.id}','${s}')">${ic}</button>`;
+body=`<div class="bar"><span class="mute">${L.length} rendez-vous</span>${seasonFilter(evs.map(evSeason))}<span style="flex:1"></span><button onclick="editEvent(null,'${c.id}')">+ Nouveau RDV</button></div>
+<div class="card"><table><tr><th>Saison</th><th>Date</th><th>Heure</th><th>Objet</th><th>Marque</th><th>Type commande</th><th>Affecté à</th><th>Statut</th><th></th></tr>
+${L.map(e=>{const d=new Date(e.date+'T00:00').toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});return`<tr class="click" onclick="evPeek('${e.id}')"><td>${esc(evSeason(e))}</td><td>${d.charAt(0).toUpperCase()+d.slice(1)}</td><td>${e.start?esc(e.start)+(e.end?' – '+esc(e.end):''):'Journée'}</td><td>${esc(e.title)}</td><td>${esc(byId('brands',e.brandId)?.name||'')}</td><td>${esc(e.orderType||'')}</td><td>${esc(byId('users',e.userId)?.name)}</td><td style="white-space:nowrap">${sb(e,'Prévu','🕓','Prévu')}${sb(e,'Fait','✓','Fait')}${sb(e,'Annulé','⊘','Annulé')}</td><td class="n"><button class="ibtn red" title="Supprimer" onclick="event.stopPropagation();evDelete('${e.id}')">🗑️</button></td></tr>`}).join('')||'<tr><td colspan="9" class="mute">Aucun rendez-vous sur ces saisons.</td></tr>'}</table></div>`}
+
+if(T==='ca'){const bs=new Map();oks.forEach(o=>{const k=o.season||'—';bs.set(k,(bs.get(k)||0)+(+o.amount))});
+const sl=[...bs].sort((a,b)=>sVal(b[0])-sVal(a[0])),mx=Math.max(1,...sl.map(x=>x[1]));
+const rs=oks.filter(o=>!state.caS||o.season===state.caS),rt=sum(rs),rb=new Map();rs.forEach(o=>rb.set(o.brandId,(rb.get(o.brandId)||0)+(+o.amount)));
+const rl=[...rb].sort((a,b)=>b[1]-a[1]);
+body=`<div class="grid2"><div class="card"><h3>CA par saison</h3>${sl.map(([s,v],i)=>`<div style="display:flex;justify-content:space-between;margin-top:${i?14:4}px"><span>${esc(s)}</span><b>${eur2(v)}</b></div><div class="sbar" style="height:10px;margin-top:6px"><div style="width:${v/mx*100}%"></div></div>${sl[i+1]&&sl[i+1][0]===sPrev(s)?'':''}`).join('')||'<p class="mute">Aucun CA.</p>'}</div>
+<div class="card"><div class="bar" style="justify-content:space-between"><h3 style="margin:0">Répartition par marque</h3><select onchange="state.caS=this.value;render()"><option value="">Toutes les saisons</option>${sl.map(([s])=>`<option ${s===state.caS?'selected':''}>${esc(s)}</option>`).join('')}</select></div>
+<table>${rl.map(([id,v],i)=>`<tr><td><span class="sq" style="background:${COLORS[i%COLORS.length]}"></span>${esc(byId('brands',id)?.name||'?')}</td><td class="n mute">${(v/rt*100).toFixed(1)} %</td><td class="n"><b>${eur2(v)}</b></td></tr>`).join('')||'<tr><td class="mute">Aucun CA.</td></tr>'}${rl.length?`<tr class="tot"><td>Total</td><td></td><td class="n">${eur2(rt)}</td></tr>`:''}</table></div></div>`}
+
+const nxD=nx?new Date(nx.date+'T00:00').toLocaleDateString('fr-FR'):'';
+return`<div class="bar">${state.from==='agenda'?`<button class="ghost" onclick="go('agenda',{from:''})">← Agenda</button>`:''}<button class="ghost" onclick="go('clients',{from:''})">← Clients</button></div>
+<div class="ch"><div class="av">${esc(ini)}</div><div style="flex:1;min-width:0"><h2>${esc(c.name)}</h2><div class="sub">${esc(c.city||'')}${c.city?' · ':''}${tot?'<span class="up">●</span> Client':'<span class="mute">●</span> Prospect'}${c.dept?' · '+esc(c.dept):''}</div></div>
+<button class="ibtn" title="Exporter la fiche (Excel)" onclick="exportClient('${c.id}')">⤓</button><button class="ibtn" title="Modifier les informations" onclick="editClient('${c.id}')">⚙️</button><button class="ibtn red" title="Supprimer le client" onclick="cDelete('${c.id}')">🗑️</button></div>
+<div class="ck">${K('#b9770e','☆ Top marque',top?byId('brands',top[0])?.name||'?':'—',top?`${eur(top[1])} · ${Math.round(top[1]/tot*100)} % du CA`:'Aucune commande')}
+${K('#a93244','CA total',eur(tot),`${oks.length} commande${oks.length>1?'s':''}`)}
+${K('#1e8449','CA '+SEASON_NOW,eur(sum(oks.filter(o=>o.season===SEASON_NOW))),'Saison en cours')}
+${K('#1d3557','Panier moyen',oks.length?eur(tot/oks.length):'—',`sur ${oks.length} commande${oks.length>1?'s':''}`)}
+${K('#5b2245','Prochain RDV',nx?(nx.start||'Journée'):'—',nx?nxD+(byId('brands',nx.brandId)?' · '+byId('brands',nx.brandId).name:nx.title?' · '+nx.title:''):'Aucun RDV prévu')}</div>
+<div class="tabs">${TABS.map(([k,l])=>`<a class="${T===k?'on':''}" onclick="cTab('${k}')">${l}</a>`).join('')}</div>${body}`}
+
 
 function vOrders(){const ss=seasons();
 const os=db.orders.filter(o=>(!state.fBrand||o.brandId===state.fBrand)&&(!state.fClient||o.clientId===state.fClient)&&(!state.fSeason||o.season===state.fSeason)&&(!state.fUser||o.userId===state.fUser)&&(!state.fType||o.type===state.fType)).sort(orderSort);
@@ -560,21 +699,25 @@ log(okSave?'🎉 <b>Import terminé.</b> Allez voir le tableau de bord.':'❌ L\
 importing=false;state.season='';nav()}
 
 /* ---------- Formulaires ---------- */
-function form(title,fields,val,onSave,onDel,extra){
-document.getElementById('modal').innerHTML=`<div class="modal" onclick="if(event.target===this)closeM()"><div class="box"><h3>${title}</h3><form id="fm">${fields.map(f=>{const v=val[f.k]??'';let inp;
+function form(title,fields,val,onSave,onDel,extra,opt){
+document.getElementById('modal').innerHTML=`<div class="modal" onclick="if(event.target===this)closeM()"><div class="box${opt?.wide?' wide':''}"><h3>${title}</h3><form id="fm">${fields.map(f=>{const v=val[f.k]??'';let inp;
 if(f.t==='select')inp=`<select name="${f.k}">${f.o.map(([ov,ol])=>`<option value="${esc(ov)}" ${String(v)===String(ov)?'selected':''}>${esc(ol)}</option>`).join('')}</select>`;
 else if(f.t==='area')inp=`<textarea name="${f.k}" rows="3">${esc(v)}</textarea>`;
-else inp=`<input name="${f.k}" type="${f.t||'text'}" value="${esc(v)}" ${f.t==='number'?'step="0.01"':''} ${f.req?'required':''}>`;
-return`<div class="f"><label>${f.l}</label>${inp}</div>`}).join('')}${extra||''}
+else inp=`<input name="${f.k}" type="${f.t==='num'?'number':(f.t||'text')}" value="${esc(v)}" ${f.t==='number'?'step="0.01"':''} ${f.req?'required':''}>`;
+return`<div class="f${f.t==='area'?' full':''}"><label>${f.l}</label>${inp}</div>`}).join('')}${extra||''}
 <div class="bar" style="margin-top:14px"><button type="submit">Enregistrer</button><button type="button" class="ghost" onclick="closeM()">Annuler</button><span style="flex:1"></span>${onDel?'<button type="button" class="del" id="delb">Supprimer</button>':''}</div></form></div></div>`;
 document.getElementById('fm').onsubmit=e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));fields.filter(f=>f.t==='number').forEach(f=>d[f.k]=parseFloat(d[f.k])||0);onSave(d);closeM();render()};
 if(onDel)document.getElementById('delb').onclick=()=>{if(confirm('Supprimer définitivement ?')&&onDel()!==false){closeM();render()}}}
 function closeM(){document.getElementById('modal').innerHTML='';if(pending){pending=false;render()}}
 
-function editClient(id){form(id?'Modifier le client':'Nouveau client',[
-{k:'name',l:'Enseigne *',req:1},{k:'contact',l:'Interlocuteur'},{k:'phone',l:'Téléphone',t:'tel'},{k:'mobile',l:'Portable',t:'tel'},{k:'email',l:'E-mail',t:'email'},{k:'address',l:'Adresse'},{k:'zip',l:'Code postal'},{k:'city',l:'Ville'},{k:'dept',l:'Département (auto depuis le CP si vide)'},{k:'sector',l:'Secteur'},{k:'hq',l:'Siège social'},{k:'siret',l:'SIRET'},{k:'notes',l:'Notes',t:'area'}],
-id?byId('clients',id):{},d=>{d.dept=d.dept||(d.zip||'').slice(0,2);upsert('clients',id,d)},
-id?()=>{if(db.orders.some(o=>o.clientId===id)){alert('Ce client a des commandes : supprimez-les d\'abord.');return false}remove('clients',id);state.view='clients'}:null)}
+function editClient(id){const c=id?byId('clients',id):null;form(id?'Modifier les informations du client':'Nouveau client',[
+{k:'name',l:'Enseigne *',req:1},...(id?[]:[{k:'contact',l:'Interlocuteur principal'}]),{k:'address',l:'Adresse'},{k:'zip',l:'Code postal'},{k:'city',l:'Ville'},{k:'dept',l:'Département (auto depuis le CP si vide)'},{k:'country',l:'Pays'},{k:'sector',l:'Secteur'},
+{k:'phone',l:'Tél. fixe',t:'tel'},{k:'mobile',l:'Tél. mobile',t:'tel'},{k:'email',l:'E-mail',t:'email'},{k:'instagram',l:'Instagram (@compte ou lien)'},{k:'facebook',l:'Facebook (page ou lien)'},{k:'website',l:'Site web'},
+{k:'location',l:'Emplacement',t:'select',o:['','Centre-ville','Centre commercial','Zone commerciale','Station de ski','Bord de mer / lac','Village','Autre'].map(s=>[s,s||'—'])},{k:'surface',l:'Surface commerciale (m²)'},{k:'openYear',l:'Année d\'ouverture'},{k:'universe',l:'Univers (surf, ski, outdoor, mode…)'},
+{k:'visited',l:'Magasin visité',t:'select',o:[['Non','Non'],['Oui','Oui']]},{k:'siret',l:'SIRET'},{k:'vat',l:'N° TVA'},{k:'capital',l:'Capital social'},{k:'creationYear',l:'Année de création'},{k:'manager',l:'Dirigeant'},{k:'nbShops',l:'Nb établissements'},{k:'solvency',l:'Score solvabilité (0 à 100)',t:'num'},{k:'hq',l:'Siège social'},
+{k:'notes',l:'Commentaire',t:'area'}],
+c||{visited:'Non'},d=>{d.dept=d.dept||(d.zip||'').slice(0,2);upsert('clients',id,d)},
+id?()=>{if(db.orders.some(o=>o.clientId===id)){alert('Ce client a des commandes : supprimez-les d\'abord.');return false}remove('clients',id);state.view='clients'}:null,'',{wide:1})}
 
 function editOrder(id,clientId){if(!db.clients.length){alert('Créez d\'abord un client.');return}
 const me_u=myUser();
@@ -585,6 +728,7 @@ form(id?'Modifier la commande':'Nouvelle commande',[
 {k:'type',l:'Type',t:'select',o:[['',''],...TYPES.map(t=>[t,t])]},
 {k:'userId',l:'Commercial',t:'select',o:db.users.map(u=>[u.id,u.name])},
 {k:'amount',l:'Montant réalisé HT (€)',t:'number',req:1},
+{k:'pieces',l:'Nombre de pièces',t:'num'},
 {k:'objective',l:'Objectif (€)',t:'number'},
 {k:'n1',l:'N-1 (€) — même saison l\'an dernier',t:'number'},
 {k:'status',l:'Statut',t:'select',o:['Prise','Confirmée','Livrée','Facturée','Annulée'].map(s=>[s,s])},
@@ -643,10 +787,14 @@ form(pre?.gcalId?'Ajouter au CRM':id?'Modifier le rendez-vous':'Nouveau rendez-v
 {k:'date',l:'Date',t:'date',req:1},{k:'start',l:'Début',t:'time'},{k:'end',l:'Fin',t:'time'},
 {k:'userId',l:'Commercial',t:'select',o:db.users.map(u=>[u.id,u.name])},
 {k:'clientId',l:'Client (optionnel)',t:'select',o:[['','—'],...sortedClients().map(c=>[c.id,c.name+(c.city?' — '+c.city:'')])]},
+{k:'brandId',l:'Marque',t:'select',o:[['','—'],...[...db.brands].sort((a,b)=>a.name.localeCompare(b.name)).map(b=>[b.id,b.name])]},
+{k:'orderType',l:'Type de commande',t:'select',o:[['','—'],...TYPES.map(t=>[t,t])]},
+{k:'season',l:'Saison (auto selon la date si vide, ex. SS27)'},
+{k:'status',l:'Statut',t:'select',o:[['','—'],['Prévu','Prévu'],['Fait','Fait'],['Annulé','Annulé']]},
 {k:'place',l:'Lieu'},
 {k:'report',l:'Compte rendu',t:'area'}],
 ev||{clientId:clientId||'',date:date||iso(new Date()),start:'10:00',end:'11:00',type:'RDV client',userId:myUser()?.id,...(pre||{})},
-d=>{d.crmUpdated=Date.now();const o=upsert('events',id,pre?.gcalId?{...d,gcalId:pre.gcalId,gcalOwner:me.email,fromGoogle:true,gRO:!!pre.gRO}:d);if(pre?.gcalId)gEv={};gPush(o)},
+d=>{d.crmUpdated=Date.now();d.season=(d.season||'').toUpperCase().replace(/\s/g,'')||seasonOfDate(d.date);const o=upsert('events',id,pre?.gcalId?{...d,gcalId:pre.gcalId,gcalOwner:me.email,fromGoogle:true,gRO:!!pre.gRO}:d);if(pre?.gcalId)gEv={};gPush(o)},
 id?()=>{gDel(byId('events',id));remove('events',id)}:null,gInfo)}
 
 function editBrand(id){form(id?'Modifier la marque':'Nouvelle marque',[{k:'name',l:'Marque *',req:1},{k:'commission',l:'Taux de commission (%)',t:'number'},{k:'contact',l:'Contact marque'},{k:'notes',l:'Notes',t:'area'}],
