@@ -50,6 +50,7 @@ input,select,textarea{border:1px solid var(--line);border-radius:6px;padding:7px
 .f{display:flex;flex-direction:column;margin-bottom:10px}
 .f label{font-size:12px;color:var(--mute);margin-bottom:3px}
 .mute{color:var(--mute)}
+.ev.gev{border-left:4px dashed #9aa3b2;background:#f1f3f6;color:#4a5263}
 .gcal{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:6px;padding:4px 8px;background:#fff}
 #toast{position:fixed;bottom:18px;right:18px;background:#152238;color:#fff;padding:10px 14px;border-radius:8px;font-size:13px;z-index:20;display:none;max-width:340px}
 #implog{font-size:13px;margin-top:10px;line-height:1.5}
@@ -168,15 +169,34 @@ toast('📅 RDV envoyé dans Google Agenda');return true}
 catch(err){toast('Google Agenda : échec de l\'envoi ('+esc(err.message)+')');return false}}
 async function gDel(e){if(!gWanted()||!e?.gcalId||N(e.gcalOwner)!==N(me?.email))return;
 try{const t=await gToken(false);await gFetch(t,`${GAPI}/${encodeURIComponent(e.gcalId)}?sendUpdates=all`,'DELETE');toast('📅 RDV retiré de Google Agenda')}catch(err){toast('Google Agenda : RDV non supprimé, faites-le à la main.')}}
-function gConnect(){gToken(true).then(()=>{toast('✅ Google Agenda connecté');render()}).catch(e=>alert('Connexion Google impossible : '+e.message))}
-function gDisconnect(){try{if(gTok&&window.google?.accounts?.oauth2)google.accounts.oauth2.revoke(gTok.t,()=>{});localStorage.removeItem('gtok');localStorage.removeItem('gcal')}catch(e){}gTok=null;toast('Google Agenda déconnecté');render()}
+/* Lecture du planning Google de la personne connectée, semaine par semaine */
+let gEv={},gLoading={};
+const gHHMM=d=>`${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+async function gLoadWeek(ws,force){const k=iso(ws);if(!gWanted()||gLoading[k]||(!force&&Array.isArray(gEv[k])))return;
+if(!gValid()){gEv[k]=null;return}
+gLoading[k]=1;
+try{const end=new Date(ws);end.setDate(end.getDate()+7);
+const r=await gFetch(gTok.t,`${GAPI}?singleEvents=true&orderBy=startTime&maxResults=250&timeMin=${encodeURIComponent(ws.toISOString())}&timeMax=${encodeURIComponent(end.toISOString())}`,'GET');
+if(r.status===401){gEv[k]=null}else{if(!r.ok)throw new Error(r.status);const j=await r.json();
+const crmG=new Set(db.events.map(e=>e.gcalId).filter(Boolean)),out=[];
+for(const it of j.items||[]){if(it.status==='cancelled'||crmG.has(it.id)||it.extendedProperties?.private?.crmId)continue;
+const base={gid:it.id,title:it.summary||'(sans titre)',place:it.location||'',link:it.htmlLink||''};
+if(it.start?.date){for(let d=new Date(it.start.date+'T00:00');iso(d)<it.end.date;d.setDate(d.getDate()+1))out.push({...base,date:iso(d),start:'',end:'',allDay:1})}
+else if(it.start?.dateTime){const st=new Date(it.start.dateTime),en=new Date(it.end.dateTime);out.push({...base,date:iso(st),start:gHHMM(st),end:iso(en)===iso(st)?gHHMM(en):''})}}
+gEv[k]=out}}
+catch(e){gEv[k]=[];toast('Google Agenda : lecture impossible ('+esc(e.message)+')')}
+delete gLoading[k];if(state.view==='agenda'&&iso(state.weekStart)===k)render()}
+function gRefresh(){gToken(false).then(()=>{gEv={};gLoadWeek(state.weekStart,true)}).catch(()=>toast('Google Agenda : reconnectez-vous.'))}
+function gEvLine(g){return`<div class="ev gev" data-href="${esc(g.link)}" onclick="event.stopPropagation();if(this.dataset.href)window.open(this.dataset.href,'_blank')" title="Ouvrir dans Google Agenda"><b>${g.allDay?'Journée':esc(g.start)+(g.end?'–'+esc(g.end):'')}</b> <span class="mute">· Google</span><br>${esc(g.title)}${g.place?'<br><i>'+esc(g.place)+'</i>':''}</div>`}
+function gConnect(){gToken(true).then(()=>{toast('✅ Google Agenda connecté');gEv={};render()}).catch(e=>alert('Connexion Google impossible : '+e.message))}
+function gDisconnect(){try{if(gTok&&window.google?.accounts?.oauth2)google.accounts.oauth2.revoke(gTok.t,()=>{});localStorage.removeItem('gtok');localStorage.removeItem('gcal')}catch(e){}gTok=null;gEv={};toast('Google Agenda déconnecté');render()}
 async function gSyncAll(){const today=iso(new Date()),u=myUser();
 const list=db.events.filter(e=>e.date>=today&&!e.gcalId&&(e.userId===u?.id));
 if(!list.length)return toast('Tous vos RDV à venir sont déjà dans Google Agenda.');
 try{await gToken(false)}catch(e){return toast('Google Agenda : reconnectez-vous.')}
 let n=0;for(const e of list)if(await gPush(e))n++;toast(`📅 ${n} / ${list.length} RDV envoyés dans Google Agenda`);render()}
 function gBar(){if(!GOOGLE_CLIENT_ID)return'<span class="mute">Google Agenda : non configuré</span>';
-return gWanted()?`<span class="gcal"><span class="up">●</span> Google Agenda connecté <button class="ghost" onclick="gSyncAll()">Envoyer mes RDV à venir</button><button class="ghost" onclick="gDisconnect()">Déconnecter</button></span>`
+return gWanted()?`<span class="gcal"><span class="up">●</span> Google Agenda connecté <button class="ghost" onclick="gRefresh()" title="Recharger mon planning Google">↻</button><button class="ghost" onclick="gSyncAll()">Envoyer mes RDV à venir</button><button class="ghost" onclick="gDisconnect()">Déconnecter</button></span>`
 :`<button class="ghost" onclick="gConnect()">📅 Connecter mon Google Agenda</button>`}
 
 /* ---------- Calculs ---------- */
@@ -276,9 +296,12 @@ return`<h2>Commandes</h2><div class="bar">${sel('fSeason',ss.map(s=>[s,s]),'Tout
 
 function vAgenda(){const ws=state.weekStart,days=[...Array(7)].map((_,i)=>{const d=new Date(ws);d.setDate(d.getDate()+i);return d}),today=iso(new Date());
 const vis=db.events.filter(e=>!state.hiddenUsers.includes(e.userId));
+const gk=iso(ws);if(gWanted())gLoadWeek(ws);
+const gl=gWanted()&&state.showG!==false&&Array.isArray(gEv[gk])?gEv[gk]:[];
+const gChip=gWanted()?`<label class="chip"><input type="checkbox" ${state.showG!==false?'checked':''} onchange="state.showG=this.checked;render()"><span class="dot" style="background:#9aa3b2"></span>Mon planning Google${gLoading[gk]?' <span class="mute">(chargement…)</span>':''}</label>${gEv[gk]===null?'<button class="ghost" onclick="gRefresh()">🔄 Afficher mon planning Google</button>':''}`:'';
 return`<h2>Agenda équipe</h2><div class="bar"><button class="ghost" onclick="shiftWeek(-7)">←</button><button class="ghost" onclick="state.weekStart=monday(new Date());render()">Aujourd'hui</button><button class="ghost" onclick="shiftWeek(7)">→</button><b>Semaine du ${days[0].toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}</b><span style="flex:1"></span>${gBar()}<button onclick="editEvent()">+ Rendez-vous</button></div>
-<div class="bar">${db.users.map(u=>`<label class="chip"><input type="checkbox" ${state.hiddenUsers.includes(u.id)?'':'checked'} onchange="toggleUser('${u.id}')"><span class="dot" style="background:${u.color}"></span>${esc(u.name)}</label>`).join('')}</div>
-<div class="week">${days.map(d=>{const k=iso(d);return`<div class="day ${k===today?'today':''}" ondblclick="editEvent(null,null,'${k}')"><h4>${d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'short'})}</h4>${vis.filter(e=>e.date===k).sort((a,b)=>(a.start||'').localeCompare(b.start||'')).map(e=>{const u=byId('users',e.userId),c=byId('clients',e.clientId);return`<div class="ev" style="border-color:${u?.color||'#999'}" onclick="event.stopPropagation();editEvent('${e.id}')"><b>${e.start||''}${e.end?'–'+e.end:''}</b> ${esc(e.type)}${e.gcalId?' 📅':''}<br>${esc(e.title)}${c?'<br><i>'+esc(c.name)+'</i>':''}<br><span class="mute">${esc(u?.name)}</span></div>`}).join('')}</div>`}).join('')}</div><p class="mute">Double-cliquez sur un jour pour ajouter un rendez-vous. 📅 = présent dans Google Agenda. Pour qu'un collègue reçoive l'invitation, renseignez son e-mail Gmail dans Équipe.</p>`}
+<div class="bar">${db.users.map(u=>`<label class="chip"><input type="checkbox" ${state.hiddenUsers.includes(u.id)?'':'checked'} onchange="toggleUser('${u.id}')"><span class="dot" style="background:${u.color}"></span>${esc(u.name)}</label>`).join('')}${gChip}</div>
+<div class="week">${days.map(d=>{const k=iso(d);return`<div class="day ${k===today?'today':''}" ondblclick="editEvent(null,null,'${k}')"><h4>${d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'short'})}</h4>${[...vis.filter(e=>e.date===k).map(e=>({s:e.start||'',h:(()=>{const u=byId('users',e.userId),c=byId('clients',e.clientId);return`<div class="ev" style="border-color:${u?.color||'#999'}" onclick="event.stopPropagation();editEvent('${e.id}')"><b>${e.start||''}${e.end?'–'+e.end:''}</b> ${esc(e.type)}${e.gcalId?' 📅':''}<br>${esc(e.title)}${c?'<br><i>'+esc(c.name)+'</i>':''}<br><span class="mute">${esc(u?.name)}</span></div>`})()})),...gl.filter(g=>g.date===k).map(g=>({s:g.start,h:gEvLine(g)}))].sort((a,b)=>a.s.localeCompare(b.s)).map(x=>x.h).join('')}</div>`}).join('')}</div><p class="mute">Double-cliquez sur un jour pour ajouter un rendez-vous. 📅 = présent dans Google Agenda. En gris pointillé : votre planning Google (cliquez pour l'ouvrir). Pour qu'un collègue reçoive l'invitation, renseignez son e-mail Gmail dans Équipe.</p>`}
 function shiftWeek(n){const d=new Date(state.weekStart);d.setDate(d.getDate()+n);state.weekStart=d;render()}
 function toggleUser(id){const h=state.hiddenUsers;state.hiddenUsers=h.includes(id)?h.filter(x=>x!==id):[...h,id];render()}
 
