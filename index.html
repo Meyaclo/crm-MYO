@@ -485,7 +485,7 @@ const link=(v,base)=>{if(!v)return'';const u=/^https?:/i.test(v)?v:(base?base+v.
 const tel=v=>v?`<a href="tel:${esc(v)}">${esc(v)}</a>`:'';
 const BST=[['Travaillée','b-ok'],['En discussion','b-mid'],['Prospect','b-grey'],['Plus commandée','b-mid'],['Pas intéressé','b-no'],['Arrêtée','b-no']];
 const badge=(s,cls)=>s?`<span class="badge ${cls||(BST.find(x=>x[0]===s)||[,'b-grey'])[1]}">${esc(s)}</span>`:'';
-const OST={'Prise':'b-grey','Confirmée':'b-mid','Livrée':'b-ok','Facturée':'b-ok','Annulée':'b-no'};
+const OST={'Prise':'b-mid','Confirmée':'b-info','Livrée':'b-vio','Facturée':'b-ok','Annulée':'b-grey'};
 
 function cContacts(c){if(Array.isArray(c.contacts))return c.contacts;return c.contact||c.mobile||c.email?[{id:'p',name:c.contact||'',role:'',phone:c.mobile||c.phone||'',email:c.email||'',main:true}]:[]}
 function saveContacts(c,list){if(list.length&&!list.some(x=>x.main))list[0].main=true;c.contacts=list;c.contact=list.find(x=>x.main)?.name||'';putMany([['clients',c]])}
