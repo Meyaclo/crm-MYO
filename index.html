@@ -224,6 +224,7 @@ a.btnl{display:inline-block;padding:6px 10px;border:1px solid var(--line);border
 .omenu{position:absolute;right:0;top:40px;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.12);z-index:8;min-width:240px;padding:6px}
 .omenu a{display:block;padding:9px 12px;border-radius:8px;cursor:pointer;color:var(--ink);white-space:nowrap}.omenu a:hover{background:var(--accent2)}
 .ocols .chip{margin:4px 6px 4px 0}
+.legal h4{margin:18px 0 6px;font-size:14px}.legal ul{padding-left:20px;margin:6px 0}
 </style>
 </head>
 <body>
@@ -272,7 +273,7 @@ const myUser=()=>linkedUser()||db.users[0];
 let state={view:'dash',stab:'profil',mode:'season',season:'',clientId:null,year:CUR,calView:innerWidth<800?'day':'week',calDate:new Date(),miniDate:null,calScroll:null,hiddenUsers:[],q:'',ptab:'map',pq:'',pKind:'',pDept:'',pSector:'',pUser:'',pLoc:'',pVisited:'',pBrand:'',pBrandSt:'',pPeriod:'',pMin:'',pCluster:true,pSort:'name',pCenter:null,pRadius:30,mapView:null,_fit:true,fActive:'ca',fBrand:'',fClient:'',fSeason:'',fUser:'',fType:''};
 
 /* ---------- Paramètres communs à l'équipe (fiche « settings » dans Supabase) ---------- */
-const DEF_CFG={id:'settings',googleClientId:'',defaultCommission:12,orderTypes:TYPES,eventTypes:EV_TYPES};
+const DEF_CFG={id:'settings',googleClientId:'',defaultCommission:12,legalContact:'',orderTypes:TYPES,eventTypes:EV_TYPES};
 function cfg(){const s=db.settings.find(x=>x.id==='settings')||{};const c={...DEF_CFG,...s};
 if(!Array.isArray(c.orderTypes)||!c.orderTypes.length)c.orderTypes=TYPES;if(!Array.isArray(c.eventTypes)||!c.eventTypes.length)c.eventTypes=EV_TYPES;return c}
 const gcid=()=>(cfg().googleClientId||GOOGLE_CLIENT_ID||'').trim();
@@ -877,9 +878,9 @@ return`<div class="cal">${side}<section class="cal-main"><header class="cal-top"
 function toggleUser(id){const h=state.hiddenUsers;state.hiddenUsers=h.includes(id)?h.filter(x=>x!==id):[...h,id];render()}
 
 /* ---------- Paramètres ---------- */
-const STABS=[['profil','Mon profil'],['general','Général'],['brands','Marques'],['team','Équipe'],['google','Google Agenda'],['data','Import / Export']];
+const STABS=[['profil','Mon profil'],['general','Général'],['brands','Marques'],['team','Équipe'],['google','Google Agenda'],['data','Import / Export'],['legal','Conditions & confidentialité']];
 function vSettings(){const t=STABS.some(([k])=>k===state.stab)?state.stab:'profil';
-const body={profil:sProfil,general:sGeneral,brands:vBrands,team:vTeam,google:sGoogle,data:vExport}[t]();
+const body={profil:sProfil,general:sGeneral,brands:vBrands,team:vTeam,google:sGoogle,data:vExport,legal:sLegal}[t]();
 return`<h2>Paramètres</h2><div class="bar"><span class="seg">${STABS.map(([k,l])=>`<button class="${t===k?'on':''}" onclick="state.stab='${k}';render()">${l}</button>`).join('')}</span></div>${body}`}
 
 function sProfil(){const u=linkedUser();
@@ -899,6 +900,7 @@ const{error}=await sb.auth.updateUser({password:f.get('pw')});if(error)alert('Er
 const lines=s=>[...new Set(String(s||'').split(/[\n,;]/).map(x=>x.trim()).filter(Boolean))];
 function sGeneral(){const c=cfg();
 return`<div class="card" style="max-width:680px"><h3>Réglages de l'agence</h3><form onsubmit="saveGeneral(event)">
+<div class="f"><label>E-mail de contact pour les questions de confidentialité (affiché dans Conditions & confidentialité)</label><input name="legalContact" type="email" value="${esc(c.legalContact)}" placeholder="contact@…"></div>
 <div class="f"><label>Taux de commission par défaut pour les nouvelles marques (%)</label><input name="defaultCommission" type="number" step="0.01" min="0" value="${esc(c.defaultCommission)}"></div>
 <div class="f"><label>Types de commande (un par ligne)</label><textarea name="orderTypes" rows="7">${esc(c.orderTypes.join('\n'))}</textarea></div>
 <div class="f"><label>Types de rendez-vous (un par ligne)</label><textarea name="eventTypes" rows="7">${esc(c.eventTypes.join('\n'))}</textarea></div>
@@ -907,7 +909,46 @@ return`<div class="card" style="max-width:680px"><h3>Réglages de l'agence</h3><
 function saveGeneral(e){e.preventDefault();const f=new FormData(e.target);
 const ot=lines(f.get('orderTypes')).map(x=>x.toUpperCase()),et=lines(f.get('eventTypes'));
 if(!ot.length||!et.length)return alert('Chaque liste doit contenir au moins un type.');
-saveCfg({defaultCommission:parseFloat(f.get('defaultCommission'))||0,orderTypes:[...new Set(ot)],eventTypes:et})}
+saveCfg({legalContact:String(f.get('legalContact')||'').trim(),defaultCommission:parseFloat(f.get('defaultCommission'))||0,orderTypes:[...new Set(ot)],eventTypes:et})}
+
+/* ---------- Conditions d'utilisation & confidentialité ---------- */
+const LEGAL_DATE='8 novembre 2026';
+function sLegal(){const c=cfg().legalContact,who=c?`<a href="mailto:${esc(c)}">${esc(c)}</a>`:'le responsable de l\'agence Meyaclo';
+return`<div class="card legal" style="max-width:820px;line-height:1.65">
+<h3>Conditions générales d'utilisation</h3><p class="mute">Dernière mise à jour : ${LEGAL_DATE}</p>
+<h4>1. Objet</h4><p>Le CRM Meyaclo est un outil interne de l'agence commerciale Meyaclo. Il sert à suivre les clients, les prospects, les commandes, les objectifs et les rendez-vous des marques représentées par l'agence. Les présentes conditions encadrent son utilisation par les membres de l'équipe.</p>
+<h4>2. Accès</h4><p>L'accès est réservé aux personnes à qui l'agence a créé un compte. Chaque utilisateur est responsable de la confidentialité de son identifiant et de son mot de passe, et s'engage à ne pas les partager. Toute utilisation suspecte de son compte doit être signalée sans délai à ${who}. L'agence peut suspendre ou supprimer un accès à tout moment, notamment au départ d'un collaborateur.</p>
+<h4>3. Bon usage</h4><p>L'utilisateur s'engage à :</p><ul>
+<li>utiliser le CRM uniquement dans le cadre de son activité professionnelle pour l'agence ;</li>
+<li>saisir des informations exactes, utiles et à jour, sans commentaire injurieux ou sans rapport avec la relation commerciale ;</li>
+<li>ne pas extraire, copier ou transmettre les données (fichiers clients, chiffres d'affaires, conditions commerciales) en dehors de l'agence, sauf accord de celle-ci ;</li>
+<li>ne pas tenter de contourner les protections de l'outil ni d'accéder à des données qui ne le concernent pas.</li></ul>
+<h4>4. Confidentialité des informations commerciales</h4><p>Les fichiers clients, chiffres d'affaires, objectifs, commissions et informations sur les marques sont confidentiels. Ils restent la propriété de l'agence et ne doivent pas être divulgués, y compris après la fin de la collaboration.</p>
+<h4>5. Disponibilité et responsabilité</h4><p>L'outil est fourni « en l'état ». L'agence s'efforce d'en assurer le bon fonctionnement mais ne garantit pas une disponibilité permanente ni l'absence d'erreurs. Les calculs (commissions, objectifs, évolutions) sont indicatifs : les factures et relevés des marques font foi. Il est recommandé de télécharger régulièrement une sauvegarde (Paramètres → Import / Export).</p>
+<h4>6. Évolution des conditions</h4><p>Ces conditions peuvent être modifiées. La date de mise à jour figure en haut de cette page. Continuer à utiliser le CRM vaut acceptation de la version en vigueur.</p>
+</div>
+<div class="card legal" style="max-width:820px;line-height:1.65">
+<h3>Politique de confidentialité</h3><p class="mute">Dernière mise à jour : ${LEGAL_DATE}</p>
+<h4>1. Responsable du traitement</h4><p>L'agence Meyaclo est responsable des données personnelles traitées dans ce CRM. Pour toute question : ${who}.</p>
+<h4>2. Données traitées</h4><ul>
+<li><b>Utilisateurs du CRM</b> : nom, adresse e-mail, mot de passe (chiffré, jamais visible par l'agence), couleur d'agenda, rendez-vous et comptes rendus saisis.</li>
+<li><b>Clients et prospects</b> (magasins et leurs interlocuteurs) : nom de l'enseigne, adresse, interlocuteur, téléphone, e-mail, SIRET, commandes, chiffre d'affaires, rendez-vous, notes.</li>
+<li><b>Google Agenda</b> (seulement si l'utilisateur connecte son compte) : les événements de son agenda nécessaires à la synchronisation, et une autorisation d'accès conservée de façon sécurisée pour renouveler la connexion.</li></ul>
+<h4>3. Finalités et base légale</h4><p>Les données servent à gérer la relation commerciale avec les magasins, à suivre l'activité de l'agence (commandes, objectifs, commissions) et à organiser les rendez-vous de l'équipe. Ce traitement repose sur l'intérêt légitime de l'agence à gérer son activité commerciale et sur l'exécution des contrats avec les clients et les marques. La connexion à Google Agenda repose sur le consentement de chaque utilisateur, qui peut le retirer à tout moment.</p>
+<h4>4. Destinataires</h4><p>Les données sont accessibles uniquement aux membres de l'équipe de l'agence disposant d'un compte. Elles ne sont ni vendues ni louées. Elles peuvent être communiquées aux marques représentées dans la mesure nécessaire au traitement des commandes.</p>
+<h4>5. Prestataires techniques</h4><ul>
+<li><b>Supabase</b> : hébergement de la base de données, des comptes de connexion et de la fonction de connexion Google ;</li>
+<li><b>GitHub Pages</b> : hébergement de l'application ;</li>
+<li><b>Google</b> : connexion et synchronisation Google Agenda, polices d'écriture ;</li>
+<li><b>IGN (Géoplateforme) et OpenStreetMap</b> : localisation des adresses et affichage de la carte de prospection ;</li>
+<li><b>jsDelivr / unpkg</b> : fourniture de bibliothèques techniques.</li></ul>
+<p>Certains de ces prestataires peuvent traiter des données hors de l'Union européenne. Ils s'engagent alors à respecter des garanties appropriées (clauses contractuelles types de la Commission européenne ou équivalent).</p>
+<h4>6. Durée de conservation</h4><p>Les données des clients et prospects sont conservées pendant la durée de la relation commerciale, puis au maximum 3 ans après le dernier contact. Les données comptables liées aux commandes peuvent être conservées jusqu'à 10 ans pour les obligations légales. Le compte d'un utilisateur est supprimé à son départ de l'agence.</p>
+<h4>7. Sécurité</h4><p>L'accès est protégé par identifiant et mot de passe. Les échanges sont chiffrés (HTTPS). Seul l'appareil de l'utilisateur conserve, dans le navigateur, les informations nécessaires à sa session et à sa connexion Google ; la déconnexion les efface.</p>
+<h4>8. Vos droits</h4><p>Conformément au RGPD et à la loi Informatique et Libertés, toute personne concernée (utilisateur, client ou prospect) peut demander l'accès à ses données, leur rectification, leur effacement, la limitation du traitement ou s'opposer à celui-ci, en écrivant à ${who}. Une réponse est apportée sous un mois. En cas de désaccord, il est possible de saisir la CNIL (<a href="https://www.cnil.fr" target="_blank" rel="noopener">cnil.fr</a>).</p>
+<h4>9. Cookies</h4><p>Le CRM n'utilise aucun cookie publicitaire ni outil de mesure d'audience. Seul le stockage local du navigateur est utilisé pour garder la session ouverte et la connexion Google.</p>
+</div>
+<p class="mute">Ces textes sont un modèle de base : faites-les relire par un professionnel si vous souhaitez une validation juridique.</p>`}
 
 function sGoogle(){const c=cfg();
 return`<div class="card" style="max-width:760px"><h3>Synchronisation Google Agenda</h3>
