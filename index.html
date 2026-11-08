@@ -10,6 +10,10 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <style>
 :root{
 --bg:#f3f5f8;--card:#fff;--ink:#16202f;--mute:#6b7487;--line:#e6e9ef;--line2:#f0f2f6;
@@ -74,7 +78,7 @@ td .down,.kpi .down{background:#fdecea}
 .ev:hover{background:#eef3f8}
 .chip{display:inline-flex;align-items:center;gap:6px;margin-right:6px}
 .dot{width:10px;height:10px;border-radius:50%;display:inline-block;vertical-align:middle}
-.modal{position:fixed;inset:0;background:rgba(15,27,45,.45);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;z-index:9;animation:fade .15s}
+.modal{position:fixed;inset:0;background:rgba(15,27,45,.45);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;z-index:2000;animation:fade .15s}
 .modal .box{background:#fff;border-radius:16px;padding:24px;width:min(540px,94vw);max-height:90vh;overflow:auto;box-shadow:0 20px 50px rgba(0,0,0,.2);animation:pop .18s}
 @keyframes fade{from{opacity:0}}@keyframes pop{from{opacity:0;transform:translateY(8px) scale(.98)}}
 .f{display:flex;flex-direction:column;margin-bottom:12px}
@@ -82,7 +86,7 @@ td .down,.kpi .down{background:#fdecea}
 .mute{color:var(--mute)}
 .ev.gev{border-left:4px dashed #9aa3b2;background:#f1f3f6;color:#4a5263}
 .gcal{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:9px;padding:4px 8px;background:#fff}
-#toast{position:fixed;bottom:20px;right:20px;background:var(--nav);color:#fff;padding:12px 16px;border-radius:12px;font-size:13px;z-index:20;display:none;max-width:360px;box-shadow:0 10px 30px rgba(0,0,0,.2)}
+#toast{position:fixed;bottom:20px;right:20px;background:var(--nav);color:#fff;padding:12px 16px;border-radius:12px;font-size:13px;z-index:2100;display:none;max-width:360px;box-shadow:0 10px 30px rgba(0,0,0,.2)}
 #implog{font-size:13px;margin-top:12px;line-height:1.6}
 .login{max-width:400px;margin:70px auto;padding:32px}
 .login .logo{width:48px;height:48px;font-size:22px;border-radius:14px;margin-bottom:14px}
@@ -188,6 +192,20 @@ input[type=color]{padding:3px;height:38px;width:70px}
 details summary{cursor:pointer;font-weight:600;margin:14px 0 6px}
 details ol{line-height:1.7;padding-left:20px}
 code{background:#f1f5f9;padding:2px 6px;border-radius:6px;font-size:12.5px}
+/* ---- Prospection ---- */
+.pfil{border-left:4px solid var(--accent);padding:14px 18px}.pfil .bar{margin-bottom:10px}
+.tgl{display:inline-flex;align-items:center;gap:8px;cursor:pointer;color:var(--mute);font-weight:500}
+.tgl input{display:none}.tgl span{width:38px;height:22px;border-radius:999px;background:#cbd5e1;position:relative;transition:background .15s}
+.tgl span::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .15s}
+.tgl input:checked+span{background:var(--accent)}.tgl input:checked+span::after{left:19px}
+.mapwrap{position:relative;border-radius:var(--radius);overflow:hidden;border:1px solid var(--line);box-shadow:var(--shadow);margin-bottom:12px}
+#pmap{height:calc(100vh - 340px);min-height:480px;z-index:0}
+.maplegend{position:absolute;top:12px;left:12px;z-index:500;background:#fff;border-radius:12px;padding:10px 16px;box-shadow:0 4px 14px rgba(16,24,40,.15);font-size:13px;line-height:1.9}
+.maplegend b{display:block;border-bottom:1px solid var(--line);padding-bottom:4px;margin-bottom:2px}
+.clu{background:var(--accent);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;border:3px solid rgba(255,255,255,.85);box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.leaflet-container{font-family:Inter,sans-serif}.leaflet-popup-content{font-size:13px;line-height:1.55;margin:14px 16px}
+.leaflet-popup-content .bar{margin:10px 0 0}.leaflet-popup-content button{padding:6px 10px;font-size:12px}
+a.btnl{display:inline-block;padding:6px 10px;border:1px solid var(--line);border-radius:9px;text-decoration:none;color:var(--ink);font-size:12px;font-weight:500;background:#fff}
 </style>
 </head>
 <body>
@@ -233,7 +251,7 @@ const CUR=new Date().getFullYear();
 const sortedClients=()=>[...db.clients].sort((a,b)=>(a.name||'').localeCompare(b.name||''));
 const linkedUser=()=>db.users.find(u=>u.email&&N(u.email)===N(me?.email));
 const myUser=()=>linkedUser()||db.users[0];
-let state={view:'dash',stab:'profil',mode:'season',season:'',clientId:null,year:CUR,calView:innerWidth<800?'day':'week',calDate:new Date(),miniDate:null,calScroll:null,hiddenUsers:[],q:'',fActive:'ca',fBrand:'',fClient:'',fSeason:'',fUser:'',fType:''};
+let state={view:'dash',stab:'profil',mode:'season',season:'',clientId:null,year:CUR,calView:innerWidth<800?'day':'week',calDate:new Date(),miniDate:null,calScroll:null,hiddenUsers:[],q:'',ptab:'map',pq:'',pKind:'',pDept:'',pSector:'',pUser:'',pLoc:'',pVisited:'',pBrand:'',pBrandSt:'',pPeriod:'',pMin:'',pCluster:true,pSort:'name',pCenter:null,pRadius:30,mapView:null,_fit:true,fActive:'ca',fBrand:'',fClient:'',fSeason:'',fUser:'',fType:''};
 
 /* ---------- Paramètres communs à l'équipe (fiche « settings » dans Supabase) ---------- */
 const DEF_CFG={id:'settings',googleClientId:'',defaultCommission:12,orderTypes:TYPES,eventTypes:EV_TYPES};
@@ -416,11 +434,12 @@ function curSeason(){const ss=seasons();if(!ss.includes(state.season))state.seas
 
 /* ---------- Navigation ---------- */
 const stBadge=s=>s?`<span class="badge ${({PRISE:'b-mid',CONFIRMEE:'b-info',LIVREE:'b-vio',FACTUREE:'b-ok',ANNULEE:'b-grey'})[N(s)]||'b-grey'}">${esc(s)}</span>`:'';
-const VIEWS=[['dash','Tableau de bord'],['clients','Clients'],['orders','Commandes'],['agenda','Agenda'],['settings','Paramètres']];
+const VIEWS=[['dash','Tableau de bord'],['clients','Clients'],['orders','Commandes'],['prospect','Prospection'],['agenda','Agenda'],['settings','Paramètres']];
 const ICONS={
 dash:'<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
 clients:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
 orders:'<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 0 1-8 0"/>',
+prospect:'<path d="M12 22s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/>',
 agenda:'<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
 brands:'<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L2 12V2h10l8.6 8.6a2 2 0 0 1 0 2.8z"/><circle cx="7" cy="7" r="1.5"/>',
 team:'<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
@@ -428,8 +447,9 @@ export:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"
 settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>'};
 function nav(){document.getElementById('nav').innerHTML='<h1><span class="logo">M</span><span>CRM Meyaclo<small>Agence multimarque</small></span></h1>'+VIEWS.map(([k,l])=>`<a class="${state.view===k||(k==='clients'&&state.view==='client')?'on':''}" onclick="go('${k}',{from:''})"><svg viewBox="0 0 24 24">${ICONS[k]||''}</svg><span>${l}</span></a>`).join('')+`<div class="who">${linkedUser()?esc(linkedUser().name)+'<br>':''}${esc(me?.email)}<br><a onclick="logout()">Déconnexion</a></div>`}
 function go(v,extra){Object.assign(state,{view:v},extra||{});render()}
-function render(){nav();if(['brands','team','export'].includes(state.view)){state.stab=state.view==='export'?'data':state.view;state.view='settings'}
-const V={dash:vDash,clients:vClients,client:vClient,orders:vOrders,agenda:vAgenda,settings:vSettings};document.getElementById('app').innerHTML=(V[state.view]||vDash)();
+function render(){if(_map){state.mapView={c:_map.getCenter(),z:_map.getZoom()};_map.remove();_map=null}nav();if(['brands','team','export'].includes(state.view)){state.stab=state.view==='export'?'data':state.view;state.view='settings'}
+const V={dash:vDash,clients:vClients,client:vClient,orders:vOrders,prospect:vProspect,agenda:vAgenda,settings:vSettings};document.getElementById('app').innerHTML=(V[state.view]||vDash)();
+if(state.view==='prospect'&&state.ptab==='map')drawMap(window._plist||[]);
 if(state.view==='agenda'){const b=document.getElementById('tgb');if(b)b.scrollTop=state.calScroll??7*HOUR}}
 
 function evLine(e){const u=byId('users',e.userId),c=byId('clients',e.clientId);return`<div class="ev" style="border-color:${u?.color||'#999'}" onclick="evPeek('${e.id}')"><b>${fmtDate(e.date)} ${e.start||''}</b> · ${esc(e.type)} · ${esc(e.title)}${c?' — '+esc(c.name):''} <span class="mute">(${esc(u?.name)})</span>${e.gcalId?' 📅':''}${e.report?'<br><span class="mute">'+esc(e.report)+'</span>':''}</div>`}
@@ -599,7 +619,7 @@ body=`<div class="grid2"><div class="card"><h3>CA par saison</h3>${sl.map(([s,v]
 <table>${rl.map(([id,v],i)=>`<tr><td><span class="sq" style="background:${COLORS[i%COLORS.length]}"></span>${esc(byId('brands',id)?.name||'?')}</td><td class="n mute">${(v/rt*100).toFixed(1)} %</td><td class="n"><b>${eur2(v)}</b></td></tr>`).join('')||'<tr><td class="mute">Aucun CA.</td></tr>'}${rl.length?`<tr class="tot"><td>Total</td><td></td><td class="n">${eur2(rt)}</td></tr>`:''}</table></div></div>`}
 
 const nxD=nx?new Date(nx.date+'T00:00').toLocaleDateString('fr-FR'):'';
-return`<div class="bar">${state.from==='agenda'?`<button class="ghost" onclick="go('agenda',{from:''})">← Agenda</button>`:''}<button class="ghost" onclick="go('clients',{from:''})">← Clients</button></div>
+return`<div class="bar">${state.from==='prospect'?`<button class="ghost" onclick="go('prospect',{from:''})">← Prospection</button>`:''}${state.from==='agenda'?`<button class="ghost" onclick="go('agenda',{from:''})">← Agenda</button>`:''}<button class="ghost" onclick="go('clients',{from:''})">← Clients</button></div>
 <div class="ch"><div class="av">${esc(ini)}</div><div style="flex:1;min-width:0"><h2>${esc(c.name)}</h2><div class="sub">${esc(c.city||'')}${c.city?' · ':''}${tot?'<span class="up">●</span> Client':'<span class="mute">●</span> Prospect'}${c.dept?' · '+esc(c.dept):''}</div></div>
 <button class="ibtn" title="Exporter la fiche (Excel)" onclick="exportClient('${c.id}')">⤓</button><button class="ibtn" title="Modifier les informations" onclick="editClient('${c.id}')">⚙️</button><button class="ibtn red" title="Supprimer le client" onclick="cDelete('${c.id}')">🗑️</button></div>
 <div class="ck">${K('#b9770e','☆ Top marque',top?byId('brands',top[0])?.name||'?':'—',top?`${eur(top[1])} · ${Math.round(top[1]/tot*100)} % du CA`:'Aucune commande')}
@@ -824,13 +844,13 @@ document.getElementById('fm').onsubmit=e=>{e.preventDefault();const d=Object.fro
 if(onDel)document.getElementById('delb').onclick=()=>{if(confirm('Supprimer définitivement ?')&&onDel()!==false){closeM();render()}}}
 function closeM(){document.getElementById('modal').innerHTML='';if(pending){pending=false;render()}}
 
-function editClient(id){const c=id?byId('clients',id):null;form(id?'Modifier les informations du client':'Nouveau client',[
-{k:'name',l:'Enseigne *',req:1},...(id?[]:[{k:'contact',l:'Interlocuteur principal'}]),{k:'address',l:'Adresse'},{k:'zip',l:'Code postal'},{k:'city',l:'Ville'},{k:'dept',l:'Département (auto depuis le CP si vide)'},{k:'country',l:'Pays'},{k:'sector',l:'Secteur'},
+function editClient(id,preset){const c=id?byId('clients',id):null;form(id?'Modifier les informations du client':(preset?.kind==='Prospect'?'Nouveau prospect':'Nouveau client'),[
+{k:'name',l:'Enseigne *',req:1},{k:'kind',l:'Type de contact',t:'select',o:[['','Automatique (client dès qu\'il a du CA)'],['Client','Client'],['Prospect','Prospect']]},{k:'userId',l:'Commercial attitré',t:'select',o:[['','—'],...db.users.map(u=>[u.id,u.name])]},...(id?[]:[{k:'contact',l:'Interlocuteur principal'}]),{k:'address',l:'Adresse'},{k:'zip',l:'Code postal'},{k:'city',l:'Ville'},{k:'dept',l:'Département (auto depuis le CP si vide)'},{k:'country',l:'Pays'},{k:'sector',l:'Secteur'},
 {k:'phone',l:'Tél. fixe',t:'tel'},{k:'mobile',l:'Tél. mobile',t:'tel'},{k:'email',l:'E-mail',t:'email'},{k:'instagram',l:'Instagram (@compte ou lien)'},{k:'facebook',l:'Facebook (page ou lien)'},{k:'website',l:'Site web'},
 {k:'location',l:'Emplacement',t:'select',o:['','Centre-ville','Centre commercial','Zone commerciale','Station de ski','Bord de mer / lac','Village','Autre'].map(s=>[s,s||'—'])},{k:'surface',l:'Surface commerciale (m²)'},{k:'openYear',l:'Année d\'ouverture'},{k:'universe',l:'Univers (surf, ski, outdoor, mode…)'},
 {k:'visited',l:'Magasin visité',t:'select',o:[['Non','Non'],['Oui','Oui']]},{k:'siret',l:'SIRET'},{k:'vat',l:'N° TVA'},{k:'capital',l:'Capital social'},{k:'creationYear',l:'Année de création'},{k:'manager',l:'Dirigeant'},{k:'nbShops',l:'Nb établissements'},{k:'solvency',l:'Score solvabilité (0 à 100)',t:'num'},{k:'hq',l:'Siège social'},
 {k:'notes',l:'Commentaire',t:'area'}],
-c||{visited:'Non'},d=>{d.dept=d.dept||(d.zip||'').slice(0,2);upsert('clients',id,d)},
+c||{visited:'Non',...(preset||{})},d=>{d.dept=d.dept||(d.zip||'').slice(0,2);const o=upsert('clients',id,d);if(needGeo(o))setTimeout(()=>geoRun([o]),50)},
 id?()=>{if(db.orders.some(o=>o.clientId===id)){alert('Ce client a des commandes : supprimez-les d\'abord.');return false}remove('clients',id);state.view='clients'}:null,'',{wide:1})}
 
 function editOrder(id,clientId){if(!db.clients.length){alert('Créez d\'abord un client.');return}
@@ -936,6 +956,149 @@ add('Agenda',[...db.events].sort((a,b)=>(a.date+(a.start||'')).localeCompare(b.d
 add('Marques',db.brands.map(b=>({Marque:b.name,'Commission %':b.commission,Contact:b.contact,Notes:b.notes})));
 add('Équipe',db.users.map(u=>({Nom:u.name,Email:u.email})));
 XLSX.writeFile(wb,`CRM_Meyaclo_export_${iso(new Date())}.xlsx`)}
+
+/* ---------- Prospection : carte des clients & prospects ---------- */
+const PCOL={Client:'#7cb342',Prospect:'#ef8a2b'};
+const PKEYS=['pq','pKind','pDept','pSector','pUser','pLoc','pVisited','pBrand','pBrandSt','pPeriod','pMin','pCenter','pRadius'];
+const geoKey=c=>N([c.address,c.zip,c.city].join(' '));
+const canGeo=c=>!!(c.zip||c.city);
+const needGeo=c=>canGeo(c)&&c.geoKey!==geoKey(c);
+const hasGeo=c=>c.lat!=null&&c.lng!=null&&c.geoKey===geoKey(c);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function km(a,b){const r=x=>x*Math.PI/180,dl=r(b.lat-a.lat),dg=r(b.lng-a.lng);const h=Math.sin(dl/2)**2+Math.cos(r(a.lat))*Math.cos(r(b.lat))*Math.sin(dg/2)**2;return 12742*Math.asin(Math.sqrt(h))}
+let _map=null,geoBusy=false,geoAuto=false;
+
+// Une ligne par client : type, CA de la période, marques (avec statut), commerciaux, distance
+function pData(){const P=state.pPeriod,inP=o=>!P||o.season===P,lim=sVal(sShift(SEASON_NOW,-1));
+const info=new Map(db.clients.map(c=>[c.id,{c,v:0,n1:0,brands:new Set(),bLast:new Map(),users:new Set(c.userId?[c.userId]:[]),last:'',any:false}]));
+for(const o of db.orders){const x=info.get(o.clientId);if(!x||!ok(o))continue;const amt=+o.amount||0;if(o.userId)x.users.add(o.userId);if(!amt)continue;
+x.any=true;if(sVal(o.season)>sVal(x.last))x.last=o.season;if(sVal(o.season)>(x.bLast.get(o.brandId)||0))x.bLast.set(o.brandId,sVal(o.season));
+if(inP(o)){x.v+=amt;x.n1+=+o.n1||0;x.brands.add(o.brandId)}}
+for(const x of info.values()){x.kind=x.c.kind||(x.any?'Client':'Prospect');if(state.pCenter&&hasGeo(x.c))x.d=km(state.pCenter,x.c);
+x.st=bid=>x.c.brandLinks?.[bid]?.status||(x.bLast.has(bid)?(x.bLast.get(bid)>=lim?'Travaillée':'Plus commandée'):'Prospect')}
+return[...info.values()]}
+function pFilter(all){const q=N(state.pq),S=state;
+return all.filter(x=>{const c=x.c;
+if(q&&!N([c.name,c.city,c.zip,c.contact,c.hq].join(' ')).includes(q))return false;
+if(S.pKind&&x.kind!==S.pKind)return false;
+if(S.pDept&&c.dept!==S.pDept)return false;
+if(S.pSector&&c.sector!==S.pSector)return false;
+if(S.pLoc&&c.location!==S.pLoc)return false;
+if(S.pVisited&&(c.visited||'Non')!==S.pVisited)return false;
+if(S.pUser&&!x.users.has(S.pUser))return false;
+if(S.pBrand){const st=x.st(S.pBrand);if(S.pBrandSt==='__not'?st==='Travaillée':S.pBrandSt?st!==S.pBrandSt:!x.brands.has(S.pBrand))return false}
+if(S.pMin&&x.v<+S.pMin)return false;
+if(S.pCenter&&!(x.d<=S.pRadius))return false;
+return true})}
+const byName=(a,b)=>(a.c.name||'').localeCompare(b.c.name||'');
+const PSORT={name:['Nom',byName],ca:['CA (décroissant)',(a,b)=>b.v-a.v||byName(a,b)],city:['Ville',(a,b)=>(a.c.city||'').localeCompare(b.c.city||'')||byName(a,b)],dept:['Département',(a,b)=>(a.c.dept||'').localeCompare(b.c.dept||'')||(a.c.city||'').localeCompare(b.c.city||'')],last:['Dernière saison',(a,b)=>sVal(b.last)-sVal(a.last)||byName(a,b)],dist:['Distance',(a,b)=>(a.d??1e9)-(b.d??1e9)]};
+function pset(k,v){state[k]=v;state._fit=true;render()}
+const psel=(k,opts,lab,w)=>`<select onchange="pset('${k}',this.value)"${w?` style="max-width:${w}px"`:''}><option value="">${lab}</option>${opts.map(([v,l])=>`<option value="${esc(v)}" ${String(state[k])===String(v)?'selected':''}>${esc(l)}</option>`).join('')}</select>`;
+
+function vProspect(){
+if(!geoAuto&&!geoBusy){const m=db.clients.filter(needGeo);geoAuto=true;if(m.length&&m.length<=40)setTimeout(()=>geoRun(m),80)}
+const all=pData(),list=pFilter(all).sort((PSORT[state.pSort]||PSORT.name)[1]);window._plist=list;
+const t=state.ptab,uniq=f=>[...new Set(db.clients.map(f).filter(Boolean))].sort();
+const brandsOpt=[...db.brands].sort((a,b)=>a.name.localeCompare(b.name)).map(b=>[b.id,b.name]);
+const missing=db.clients.filter(needGeo).length,notFound=db.clients.filter(c=>c.geo==='none'&&!needGeo(c)).length,noAddr=db.clients.filter(c=>!canGeo(c)).length;
+const nC=list.filter(x=>x.kind==='Client').length,nP=list.length-nC,onMap=list.filter(x=>hasGeo(x.c)).length;
+const saved=pSaved(),nf=PKEYS.filter(k=>k!=='pRadius'&&state[k]).length;
+const tabs=`<span class="seg">${[['list','Liste des contacts'],['map','Carte'],['brands','Marques à proposer']].map(([k,l])=>`<button class="${t===k?'on':''}" onclick="state.ptab='${k}';state._fit=true;render()">${l}</button>`).join('')}</span>`;
+const filters=`<div class="card pfil"><div class="bar">
+<input id="q" placeholder="🔍 Rechercher un nom, une ville, un CP…" style="min-width:250px" value="${esc(state.pq)}" oninput="state.pq=this.value;clearTimeout(window._t);window._t=setTimeout(()=>{state._fit=true;render();const i=document.getElementById('q');i.focus();i.setSelectionRange(i.value.length,i.value.length)},350)">
+<label class="tgl"><input type="checkbox" ${state.pCluster?'checked':''} onchange="state.pCluster=this.checked;render()"><span></span>Regrouper</label>
+${psel('pKind',[['Client','Type : Client'],['Prospect','Type : Prospect']],'Clients + prospects')}
+${psel('pDept',uniq(c=>c.dept).map(d=>[d,'Dépt '+d]),'Tous départements')}
+${psel('pUser',db.users.map(u=>[u.id,u.name]),'Tous commerciaux')}
+${psel('pSector',uniq(c=>c.sector).map(s=>[s,s]),'Tous secteurs',200)}
+${psel('pLoc',uniq(c=>c.location).map(s=>[s,s]),'Tous emplacements')}
+${psel('pVisited',[['Oui','Magasin visité'],['Non','Jamais visité']],'Visité ou non')}
+</div><div class="bar">
+${psel('pPeriod',seasons().map(s=>[s,'Saison '+s]),'Toutes saisons')}
+${psel('pBrand',brandsOpt,'Marque…')}
+${state.pBrand?`<select onchange="pset('pBrandSt',this.value)"><option value="" ${!state.pBrandSt?'selected':''}>… commandée sur la période</option><option value="__not" ${state.pBrandSt==='__not'?'selected':''}>… pas travaillée (à proposer)</option>${BST.map(([s])=>`<option ${state.pBrandSt===s?'selected':''}>${s}</option>`).join('')}</select>`:''}
+<input type="number" min="0" step="500" placeholder="CA min. €" style="width:115px" value="${esc(state.pMin)}" onchange="pset('pMin',this.value)">
+<span class="mute" style="margin-left:6px">Autour de</span><input id="pa" placeholder="Ville, adresse ou client" style="width:190px" value="${esc(state.pCenter?.label||'')}" onkeydown="if(event.key==='Enter')pAround(this.value)">
+<select onchange="state.pRadius=+this.value;state._fit=true;render()">${[10,20,30,50,80,120].map(r=>`<option value="${r}" ${state.pRadius===r?'selected':''}>${r} km</option>`).join('')}</select>
+<button class="ghost" onclick="pAround(document.getElementById('pa').value)">OK</button><button class="ghost" onclick="pMyPos()" title="Utiliser ma position">📍</button>${state.pCenter?`<button class="ghost" onclick="pAround('')" title="Retirer">✕</button>`:''}
+</div><div class="bar" style="margin-bottom:0">
+<select onchange="pLoad(this.value)"><option value="">🔖 Filtres enregistrés${Object.keys(saved).length?' ('+Object.keys(saved).length+')':''}</option>${Object.keys(saved).map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('')}${Object.keys(saved).length?'<option value="__del">— Supprimer un filtre…</option>':''}</select>
+<button class="ghost" onclick="pSave()">Enregistrer ce filtre</button>${nf?`<button class="ghost" onclick="pReset()">Réinitialiser (${nf})</button>`:''}
+</div></div>`;
+const info=`<div class="bar"><b>${list.length} contact(s)</b><span class="mute">${nC} client(s) · ${nP} prospect(s)${list.length-onMap?` · ${list.length-onMap} non localisé(s)`:''}</span>
+<span style="flex:1"></span><span id="geolog" class="mute">${geoBusy?'⏳ Localisation en cours…':''}</span>
+${missing&&!geoBusy?`<button onclick="geoRun(db.clients.filter(needGeo))">📍 Placer ${missing} fiche(s) sur la carte</button>`:''}
+<span class="mute">Trier par</span><select onchange="state.pSort=this.value;render()">${Object.entries(PSORT).filter(([k])=>k!=='dist'||state.pCenter).map(([k,[l]])=>`<option value="${k}" ${state.pSort===k?'selected':''}>${l}</option>`).join('')}</select>
+<button class="ghost" onclick="pExport()">Exporter la sélection</button><button onclick="editClient(null,{kind:'Prospect'})">+ Prospect</button></div>`;
+let body;
+if(t==='map')body=`<div class="mapwrap"><div id="pmap"></div><div class="maplegend"><b>${onMap} contacts</b><div><span class="dot" style="background:${PCOL.Client}"></span> Client</div><div><span class="dot" style="background:${PCOL.Prospect}"></span> Prospect</div>${state.pCenter?`<div class="mute" style="font-size:12px">◎ ${state.pRadius} km autour de ${esc(state.pCenter.label)}</div>`:''}</div></div>
+${notFound||noAddr?`<p class="mute">${notFound?notFound+' fiche(s) dont l\'adresse est introuvable':''}${notFound&&noAddr?' · ':''}${noAddr?noAddr+' fiche(s) sans code postal ni ville':''} : corrigez l'adresse dans la fiche, elle sera replacée automatiquement.</p>`:''}`;
+else if(t==='list'){const shown=list.slice(0,500);
+body=`<div class="card"><table><tr><th>Type</th><th>Enseigne</th><th>Ville</th><th>Dépt</th><th>Contact</th><th>Téléphone</th><th class="n">CA ${esc(state.pPeriod||'toutes saisons')}</th><th class="n">N-1</th><th class="n">Évol.</th><th>Marques</th><th>Dernière saison</th>${state.pCenter?'<th class="n">Distance</th>':''}</tr>
+${shown.map(x=>{const c=x.c;return`<tr class="click" onclick="go('client',{clientId:'${c.id}',from:'prospect'})"><td><span class="dot" style="background:${PCOL[x.kind]}"></span> ${x.kind}</td><td><b>${esc(c.name)}</b>${hasGeo(c)?'':' <span class="mute" title="Pas encore placé sur la carte">⚠︎</span>'}</td><td>${esc(c.city)}</td><td>${esc(c.dept)}</td><td>${esc(c.contact)}</td><td>${esc(c.phone||c.mobile)}</td><td class="n">${x.v?eur(x.v):''}</td><td class="n">${x.n1?eur(x.n1):''}</td><td class="n">${x.v||x.n1?evo(x.v,x.n1):''}</td><td class="mute" style="font-size:12px">${[...x.brands].map(id=>esc(byId('brands',id)?.name)).join(', ')}</td><td>${x.last?'<span class="badge">'+esc(x.last)+'</span>':'—'}</td>${state.pCenter?`<td class="n">${x.d!=null?x.d.toFixed(0)+' km':'—'}</td>`:''}</tr>`}).join('')||'<tr><td colspan="12" class="mute">Aucun contact ne correspond aux filtres.</td></tr>'}</table>${list.length>500?'<p class="mute">500 premiers affichés — affinez les filtres.</p>':''}</div>`}
+else{const cl=list.filter(x=>x.kind==='Client'),ids=new Set(cl.map(x=>x.c.id)),P=state.pPeriod;
+const rows=db.brands.map(b=>{const n=cl.filter(x=>x.st(b.id)==='Travaillée').length;return{b,n,not:cl.length-n,v:ca(o=>o.brandId===b.id&&ids.has(o.clientId)&&(!P||o.season===P))}}).sort((a,b)=>b.not-a.not||a.b.name.localeCompare(b.b.name));
+body=`<div class="card"><h3>Potentiel par marque — ${cl.length} client(s) de la sélection${nP?` (+ ${nP} prospect(s))`:''}</h3><p class="mute" style="margin-top:-6px">Pour chaque marque : les clients de la sélection qui la travaillent (commandée sur la saison en cours ou la précédente) et ceux à qui la proposer.</p>
+<table><tr><th>Marque</th><th class="n">La travaillent</th><th></th><th class="n">À démarcher</th><th class="n">CA sélection</th><th></th></tr>${rows.map(r=>`<tr><td><b>${esc(r.b.name)}</b></td><td class="n">${r.n}</td><td style="width:22%"><div class="barfill" style="width:${cl.length?r.n/cl.length*100:0}%"></div></td><td class="n"><b>${r.not}</b></td><td class="n">${eur(r.v)}</td><td class="n">${r.not?`<button class="ghost" onclick="Object.assign(state,{pBrand:'${r.b.id}',pBrandSt:'__not',pKind:'Client',ptab:'map',_fit:true});render()">Voir sur la carte →</button>`:''}</td></tr>`).join('')}</table></div>`}
+return`<h2>Prospection</h2><div class="bar">${tabs}</div>${filters}${info}${body}`}
+
+const pin=k=>L.divIcon({className:'',iconSize:[26,36],iconAnchor:[13,34],popupAnchor:[0,-30],html:`<svg width="26" height="36" viewBox="0 0 26 36"><path d="M13 1C6.4 1 1 6.3 1 12.9 1 22 13 35 13 35s12-13 12-22.1C25 6.3 19.6 1 13 1z" fill="${PCOL[k]}" stroke="#fff" stroke-width="2"/><circle cx="13" cy="13" r="4.5" fill="#fff"/></svg>`});
+function pPopup(x){const c=x.c,bn=id=>byId('brands',id)?.name,tel=c.phone||c.mobile;
+const carried=db.brands.filter(b=>x.st(b.id)==='Travaillée').map(b=>b.name).sort(),todo=db.brands.filter(b=>!['Travaillée','Pas intéressé','Arrêtée'].includes(x.st(b.id))).map(b=>b.name).sort();
+return`<div><b style="font-size:14px">${esc(c.name)}</b> <span class="badge" style="background:${PCOL[x.kind]}22;color:${PCOL[x.kind]}">${x.kind}</span>
+<div class="mute">${esc([c.address,[c.zip,c.city].filter(Boolean).join(' ')].filter(Boolean).join(', '))}</div>
+${c.contact?`<div>👤 ${esc(c.contact)}</div>`:''}${tel?`<div>📞 <a href="tel:${esc(tel)}">${esc(tel)}</a></div>`:''}${c.email?`<div>✉️ <a href="mailto:${esc(c.email)}">${esc(c.email)}</a></div>`:''}
+${[c.location,c.universe,c.visited==='Oui'?'visité':''].filter(Boolean).length?`<div class="mute">${esc([c.location,c.universe,c.visited==='Oui'?'magasin visité':''].filter(Boolean).join(' · '))}</div>`:''}
+${x.d!=null?`<div>📍 ${x.d.toFixed(0)} km de ${esc(state.pCenter.label)}</div>`:''}
+<div style="margin-top:6px">CA ${esc(state.pPeriod||'toutes saisons')} : <b>${eur(x.v)}</b>${x.n1?` · N-1 ${eur(x.n1)} ${evo(x.v,x.n1)}`:''}${x.last?`<br><span class="mute">Dernière saison : ${esc(x.last)}</span>`:''}</div>
+${carried.length?`<div><span class="mute">Travaille :</span> ${carried.map(esc).join(', ')}</div>`:''}
+${todo.length?`<div><span class="mute">À proposer :</span> ${todo.map(esc).join(', ')}</div>`:''}
+<div class="bar"><button onclick="go('client',{clientId:'${c.id}',from:'prospect'})">Fiche</button><button class="ghost" onclick="editEvent(null,'${c.id}')">+ RDV</button><a class="btnl" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}">Itinéraire</a></div></div>`}
+function drawMap(list){const el=document.getElementById('pmap');if(!el)return;if(!window.L){el.innerHTML='<p class="mute" style="padding:20px">Carte indisponible (connexion internet requise).</p>';return}
+_map=L.map(el,{zoomControl:false});L.control.zoom({position:'bottomleft'}).addTo(_map);L.control.scale({position:'bottomleft',imperial:false}).addTo(_map);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>'}).addTo(_map);
+const grp=state.pCluster&&L.markerClusterGroup?L.markerClusterGroup({showCoverageOnHover:false,maxClusterRadius:55,iconCreateFunction:cl=>{const n=cl.getChildCount(),s=n<10?34:n<100?42:52;return L.divIcon({html:`<div class="clu" style="width:${s}px;height:${s}px">${n}</div>`,className:'',iconSize:[s,s]})}}):L.featureGroup();
+const pts=[];for(const x of list){if(!hasGeo(x.c))continue;const m=L.marker([x.c.lat,x.c.lng],{icon:pin(x.kind),title:x.c.name});m.bindPopup(()=>pPopup(x),{maxWidth:330});grp.addLayer(m);pts.push([x.c.lat,x.c.lng])}
+grp.addTo(_map);
+if(state.pCenter){const p=[state.pCenter.lat,state.pCenter.lng];L.circle(p,{radius:state.pRadius*1000,color:'#0e7490',weight:1.5,fillOpacity:.06}).addTo(_map);L.circleMarker(p,{radius:6,color:'#fff',weight:2,fillColor:'#0f1b2d',fillOpacity:1}).addTo(_map).bindTooltip(esc(state.pCenter.label));pts.push(p)}
+if(state.mapView&&!state._fit)_map.setView(state.mapView.c,state.mapView.z);else if(pts.length)_map.fitBounds(pts,{padding:[40,40],maxZoom:13});else _map.setView([45.6,5],7);
+state._fit=false;setTimeout(()=>_map&&_map.invalidateSize(),0)}
+
+/* Géolocalisation des adresses (Base Adresse Nationale / IGN, gratuit) — coordonnées mémorisées dans la fiche */
+const GEO_URLS=['https://data.geopf.fr/geocodage/search','https://api-adresse.data.gouv.fr/search/'];
+async function geoQuery(q,o={}){q=str(q);if(q.length<3)return null;
+for(const base of GEO_URLS){for(let a=0;a<3;a++){let r;try{const u=new URL(base);u.searchParams.set('q',q.slice(0,190));u.searchParams.set('limit','1');if(o.type)u.searchParams.set('type',o.type);if(o.postcode)u.searchParams.set('postcode',o.postcode);r=await fetch(u)}catch(e){break}
+if(r.status===429||r.status>=500){await sleep(800*(a+1));continue}if(!r.ok)return null;const j=await r.json().catch(()=>null);return j?.features?.[0]||null}}
+throw new Error('Service de géolocalisation injoignable')}
+const gpt=(f,geo)=>({lng:f.geometry.coordinates[0],lat:f.geometry.coordinates[1],geo});
+async function geoOne(c){const z=/^\d{5}$/.test(c.zip||'')?c.zip:'';
+if(c.address){const f=await geoQuery([c.address,c.zip,c.city].filter(Boolean).join(' '),{postcode:z});if(f&&f.properties?.score>=0.5)return gpt(f,'adresse')}
+const f=await geoQuery([c.zip,c.city].filter(Boolean).join(' '),{type:'municipality'});if(f&&f.properties?.score>=0.3)return gpt(f,'commune');return null}
+async function geoRun(list){list=list.filter(canGeo);if(geoBusy||!list.length)return;geoBusy=true;importing=true;
+let done=0,okN=0,ko=0,err=0;const buf=[],queue=[...list];
+const upd=()=>{const L=document.getElementById('geolog');if(L)L.textContent=`⏳ Placement sur la carte : ${done} / ${list.length}…`};upd();
+const worker=async()=>{while(queue.length){const c=queue.shift();let r;try{r=await geoOne(c)}catch(e){err++;done++;upd();continue}
+Object.assign(c,r||{lat:null,lng:null,geo:'none'},{geoKey:geoKey(c)});r?okN++:ko++;buf.push(['clients',c]);done++;upd();if(buf.length>=50)await putMany(buf.splice(0,buf.length))}};
+try{await Promise.all([...Array(Math.min(6,list.length))].map(worker));if(buf.length)await putMany(buf.splice(0,buf.length))}finally{geoBusy=false;importing=false}
+if(list.length>1)state._fit=true;pending=false;render();
+toast(`📍 ${okN} fiche(s) placée(s) sur la carte${ko?` · ${ko} adresse(s) introuvable(s)`:''}${err?` · ${err} non traitée(s) (service indisponible, réessayez)`:''}`)}
+
+async function pAround(txt){txt=str(txt);if(!txt){state.pCenter=null;if(state.pSort==='dist')state.pSort='name';return pset('pCenter',null)}
+const c=db.clients.find(c=>N(c.name)===N(txt)&&hasGeo(c));let p=c?{lat:c.lat,lng:c.lng,label:c.name}:null;
+if(!p){try{const f=await geoQuery(txt);if(f)p={...gpt(f),label:f.properties?.label||txt}}catch(e){return toast('Service de géolocalisation injoignable.')}}
+if(!p)return toast('Lieu introuvable : '+esc(txt));state.pSort='dist';pset('pCenter',{lat:p.lat,lng:p.lng,label:p.label})}
+function pMyPos(){if(!navigator.geolocation)return toast('Géolocalisation indisponible sur cet appareil.');
+navigator.geolocation.getCurrentPosition(p=>{state.pSort='dist';pset('pCenter',{lat:p.coords.latitude,lng:p.coords.longitude,label:'ma position'})},()=>toast('Position refusée ou indisponible.'),{timeout:10000})}
+function pSaved(){try{return JSON.parse(localStorage.getItem('pfilters')||'{}')}catch(e){return{}}}
+function pStore(s){try{localStorage.setItem('pfilters',JSON.stringify(s));return true}catch(e){alert('Enregistrement impossible sur ce navigateur.');return false}}
+function pSave(){const n=str(prompt('Nom du filtre (ex. « Stations 73 sans Stance »)'));if(!n)return;const s=pSaved();s[n]=Object.fromEntries(PKEYS.map(k=>[k,state[k]]));if(pStore(s))toast('🔖 Filtre « '+esc(n)+' » enregistré');render()}
+function pLoad(n){if(!n)return;const s=pSaved();
+if(n==='__del'){const d=prompt('Nom du filtre à supprimer :\n'+Object.keys(s).join('\n'));if(d&&s[d]){delete s[d];if(pStore(s))toast('Filtre supprimé')}return render()}
+if(s[n]){Object.assign(state,s[n],{_fit:true});render()}}
+function pReset(){PKEYS.forEach(k=>state[k]=k==='pRadius'?30:k==='pCenter'?null:'');if(state.pSort==='dist')state.pSort='name';state._fit=true;render()}
+function pExport(){if(typeof XLSX==='undefined')return alert('Module Excel non chargé (connexion internet requise).');const P=state.pPeriod;
+const rows=(window._plist||[]).map(x=>{const c=x.c;return{Type:x.kind,Enseigne:c.name,Interlocuteur:c.contact,Téléphone:c.phone,Portable:c.mobile,Email:c.email,Adresse:c.address,CP:c.zip,Ville:c.city,Département:c.dept,Secteur:c.sector,Emplacement:c.location,Visité:c.visited,[`CA ${P||'toutes saisons'}`]:x.v,'N-1':x.n1,'Marques travaillées':db.brands.filter(b=>x.st(b.id)==='Travaillée').map(b=>b.name).join(', '),'Dernière saison':x.last,...(state.pCenter?{'Distance (km)':x.d!=null?Math.round(x.d):''}:{})}});
+const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.length?rows:[{}]),'Prospection');XLSX.writeFile(wb,`CRM_Meyaclo_prospection_${iso(new Date())}.xlsx`)}
 
 function backup(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(db,null,1)],{type:'application/json'}));a.download=`CRM_sauvegarde_${iso(new Date())}.json`;a.click()}
 function restore(f){if(!f)return;const r=new FileReader();r.onload=async()=>{let d;try{d=JSON.parse(r.result);if(!d.clients||!d.orders)throw 0}catch(e){return alert('Fichier invalide.')}
