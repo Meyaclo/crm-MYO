@@ -283,7 +283,7 @@ const withCur=(list,cur)=>[...new Set([...list,cur].filter(Boolean))];
 
 /* ---------- Connexion & synchronisation Supabase ---------- */
 function vLogin(msg){document.getElementById('nav').style.display='none';
-document.getElementById('app').innerHTML=`<div class="card login"><span class="logo">M</span><h2>CRM Meyaclo</h2><p class="mute" style="margin:0 0 20px">Connectez-vous pour accéder à vos clients et commandes.</p><form id="lf"><div class="f"><label>E-mail</label><input name="email" type="email" required autocomplete="username"></div><div class="f"><label>Mot de passe</label><input name="pw" type="password" required autocomplete="current-password"></div><button type="submit">Se connecter</button><p class="down">${esc(msg||'')}</p></form></div>`;
+document.getElementById('app').innerHTML=`<div class="card login"><span class="logo">M</span><h2>CRM Meyaclo</h2><p class="mute" style="margin:0 0 20px">Connectez-vous pour accéder à vos clients et commandes.</p><form id="lf"><div class="f"><label>E-mail</label><input name="email" type="email" required autocomplete="username"></div><div class="f"><label>Mot de passe</label><input name="pw" type="password" required autocomplete="current-password"></div><button type="submit">Se connecter</button><p class="down">${esc(msg||'')}</p></form><p class="mute" style="font-size:12px;text-align:center;margin:14px 0 0"><a href="conditions.html" target="_blank">Conditions d'utilisation</a> · <a href="confidentialite.html" target="_blank">Confidentialité</a></p></div>`;
 document.getElementById('lf').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target);const{error}=await sb.auth.signInWithPassword({email:f.get('email'),password:f.get('pw')});if(error)vLogin('Identifiants incorrects.');else start()}}
 
 async function start(){
@@ -948,6 +948,7 @@ return`<div class="card legal" style="max-width:820px;line-height:1.65">
 <h4>8. Vos droits</h4><p>Conformément au RGPD et à la loi Informatique et Libertés, toute personne concernée (utilisateur, client ou prospect) peut demander l'accès à ses données, leur rectification, leur effacement, la limitation du traitement ou s'opposer à celui-ci, en écrivant à ${who}. Une réponse est apportée sous un mois. En cas de désaccord, il est possible de saisir la CNIL (<a href="https://www.cnil.fr" target="_blank" rel="noopener">cnil.fr</a>).</p>
 <h4>9. Cookies</h4><p>Le CRM n'utilise aucun cookie publicitaire ni outil de mesure d'audience. Seul le stockage local du navigateur est utilisé pour garder la session ouverte et la connexion Google.</p>
 </div>
+<p>Versions publiques (sans connexion) : <a href="conditions.html" target="_blank">conditions.html</a> · <a href="confidentialite.html" target="_blank">confidentialite.html</a></p>
 <p class="mute">Ces textes sont un modèle de base : faites-les relire par un professionnel si vous souhaitez une validation juridique.</p>`}
 
 function sGoogle(){const c=cfg();
