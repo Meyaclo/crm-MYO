@@ -263,7 +263,7 @@ function seasonDate(s){const m=SRX.exec(s||'');if(!m)return iso(new Date());cons
 function seasons(){return[...new Set(db.orders.map(o=>o.season).filter(Boolean))].sort((a,b)=>sVal(b)-sVal(a)||b.localeCompare(a))}
 
 function seed(){return{brands:BRANDS.map(n=>({id:uid(),name:n,commission:12,contact:'',notes:''})),users:[{id:uid(),name:'Moi',email:'',color:COLORS[0]}],clients:[],orders:[],events:[],settings:[]}}
-let db={brands:[],users:[],clients:[],orders:[],events:[],settings:[]},me=null,pending=false,importing=false,impLog='';
+let db={brands:[],users:[],clients:[],orders:[],events:[],settings:[]},me=null,isAdmin=false,pending=false,importing=false,impLog='';
 const byId=(arr,id)=>db[arr].find(x=>x.id===id);
 const yearOf=o=>+(o.date||'').slice(0,4);
 const CUR=new Date().getFullYear();
@@ -290,6 +290,7 @@ async function start(){
 const{data:{session}}=await sb.auth.getSession();if(!session)return vLogin();
 me=session.user;document.getElementById('nav').style.display='';
 document.getElementById('app').innerHTML='<p class="mute">Chargement des données…</p>';
+try{const{data:adm}=await sb.rpc('is_admin');isAdmin=adm===true}catch(e){isAdmin=false}
 try{await loadAll()}catch(e){document.getElementById('app').innerHTML=`<p class="down">Erreur de connexion à la base : ${esc(e.message)}</p>`;return}
 if(!db.brands.length&&!db.users.length){const s=seed();s.users[0].name=me.email.split('@')[0];s.users[0].email=me.email;await putMany([...s.brands.map(x=>['brands',x]),...s.users.map(x=>['users',x])]);s.settings=db.settings;db=s}
 listen();render();gSrvInit().then(()=>{if(!document.getElementById('modal').innerHTML)render();gSync(true)})}
@@ -484,7 +485,7 @@ brands:'<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L2 12V2h10l8.6 8.6a2 2 0 0 
 team:'<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
 export:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
 settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>'};
-function nav(){document.getElementById('nav').innerHTML='<h1><span class="logo">M</span><span>CRM Meyaclo<small>Agence multimarque</small></span></h1>'+VIEWS.map(([k,l])=>`<a class="${state.view===k||(k==='clients'&&state.view==='client')?'on':''}" onclick="go('${k}',{from:''})"><svg viewBox="0 0 24 24">${ICONS[k]||''}</svg><span>${l}</span></a>`).join('')+`<div class="who">${linkedUser()?esc(linkedUser().name)+'<br>':''}${esc(me?.email)}<br><a onclick="logout()">Déconnexion</a></div>`}
+function nav(){document.getElementById('nav').innerHTML='<h1><span class="logo">M</span><span>CRM Meyaclo<small>Agence multimarque</small></span></h1>'+VIEWS.map(([k,l])=>`<a class="${state.view===k||(k==='clients'&&state.view==='client')?'on':''}" onclick="go('${k}',{from:''})"><svg viewBox="0 0 24 24">${ICONS[k]||''}</svg><span>${l}</span></a>`).join('')+`<div class="who">${linkedUser()?esc(linkedUser().name)+'<br>':''}${esc(me?.email)}${isAdmin?'<br><span class="badge" style="margin-top:4px">Administrateur</span>':''}<br><a onclick="logout()">Déconnexion</a></div>`}
 function go(v,extra){Object.assign(state,{view:v},extra||{});render()}
 function render(){if(_map){state.mapView={c:_map.getCenter(),z:_map.getZoom()};_map.remove();_map=null}nav();if(['brands','team','export'].includes(state.view)){state.stab=state.view==='export'?'data':state.view;state.view='settings'}
 const V={dash:vDash,clients:vClients,client:vClient,orders:vOrders,obj:vObj,prospect:vProspect,agenda:vAgenda,settings:vSettings};document.getElementById('app').innerHTML=(V[state.view]||vDash)();
@@ -980,7 +981,7 @@ function vExport(){return`<div class="card"><h3>Importer depuis Excel</h3><p>Sé
 <label style="display:inline-block;background:var(--accent);color:#fff;padding:8px 12px;border-radius:6px;cursor:pointer;font-size:13px">Choisir les fichiers Excel<input type="file" accept=".xlsx,.xls,.csv" multiple style="display:none" onchange="importFiles([...this.files]);this.value=''"></label>
 <div id="implog">${impLog}</div></div>
 <div class="card"><h3>Export Excel</h3><p>Un fichier .xlsx avec un onglet par type de données : clients, commandes, CA par client × marque × saison, CA par marque, CA par commercial, agenda, marques, équipe.</p><button onclick="exportXlsx()">Télécharger l'export Excel</button></div>
-<div class="card"><h3>Sauvegarde complète</h3><p class="mute">Les données sont partagées en ligne avec l'équipe. Une sauvegarde régulière reste conseillée. La restauration remplace les données de toute l'équipe.</p><div class="bar"><button class="ghost" onclick="backup()">Télécharger une sauvegarde (.json)</button><label style="border:1px solid var(--line);padding:8px 12px;border-radius:6px;cursor:pointer;background:#fff;font-size:13px">Restaurer une sauvegarde<input type="file" accept=".json" style="display:none" onchange="restore(this.files[0])"></label></div></div>`}
+<div class="card"><h3>Sauvegarde complète</h3><p class="mute">Les données sont partagées en ligne avec l'équipe. Une sauvegarde régulière reste conseillée. La restauration remplace les données de toute l'équipe.</p><div class="bar"><button class="ghost" onclick="backup()">Télécharger une sauvegarde (.json)</button>${isAdmin?`<label style="border:1px solid var(--line);padding:8px 12px;border-radius:6px;cursor:pointer;background:#fff;font-size:13px">Restaurer une sauvegarde<input type="file" accept=".json" style="display:none" onchange="restore(this.files[0]);this.value=''"></label>`:'<span class="mute">La restauration est réservée à l\'administrateur.</span>'}</div></div>`}
 
 /* ---------- Import Excel ---------- */
 const num=v=>typeof v==='number'?v:(parseFloat(String(v??'').replace(/\s/g,'').replace(/[  ]/g,'').replace(',','.'))||0);
@@ -1315,9 +1316,10 @@ const rows=(window._plist||[]).map(x=>{const c=x.c;return{Type:x.kind,Enseigne:c
 const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.length?rows:[{}]),'Prospection');XLSX.writeFile(wb,`CRM_Meyaclo_prospection_${iso(new Date())}.xlsx`)}
 
 function backup(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(db,null,1)],{type:'application/json'}));a.download=`CRM_sauvegarde_${iso(new Date())}.json`;a.click()}
-function restore(f){if(!f)return;const r=new FileReader();r.onload=async()=>{let d;try{d=JSON.parse(r.result);if(!d.clients||!d.orders)throw 0}catch(e){return alert('Fichier invalide.')}
-if(!confirm('Remplacer TOUTES les données de l\'équipe par cette sauvegarde ?'))return;
-const{error}=await sb.from('records').delete().neq('id','');if(error)return alert('Erreur : '+error.message);
+function restore(f){if(!f)return;if(!isAdmin)return alert('La restauration est réservée à l\'administrateur.');const r=new FileReader();r.onload=async()=>{let d;try{d=JSON.parse(r.result);if(!d.clients||!d.orders)throw 0}catch(e){return alert('Fichier invalide.')}
+if(!confirm('Remplacer TOUTES les données de l\'équipe par cette sauvegarde ?\n\nUne sauvegarde des données actuelles va d\'abord être téléchargée.'))return;
+backup();await new Promise(ok=>setTimeout(ok,1500));
+const{error}=await sb.rpc('admin_wipe_records');if(error)return alert('Erreur : '+error.message);
 if(await putMany(KINDS.flatMap(k=>(d[k]||[]).map(o=>[k,o])))){db={brands:d.brands||[],users:d.users||[],clients:d.clients,orders:d.orders,events:d.events||[],settings:d.settings||[]};render();alert('Sauvegarde restaurée.')}};r.readAsText(f)}
 
 sb.auth.onAuthStateChange(ev=>{if(ev==='SIGNED_OUT')location.reload()});
