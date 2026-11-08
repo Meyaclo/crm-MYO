@@ -291,7 +291,7 @@ me=session.user;document.getElementById('nav').style.display='';
 document.getElementById('app').innerHTML='<p class="mute">Chargement des données…</p>';
 try{await loadAll()}catch(e){document.getElementById('app').innerHTML=`<p class="down">Erreur de connexion à la base : ${esc(e.message)}</p>`;return}
 if(!db.brands.length&&!db.users.length){const s=seed();s.users[0].name=me.email.split('@')[0];s.users[0].email=me.email;await putMany([...s.brands.map(x=>['brands',x]),...s.users.map(x=>['users',x])]);s.settings=db.settings;db=s}
-listen();render();gSync(true)}
+listen();render();gSrvInit().then(()=>{if(!document.getElementById('modal').innerHTML)render();gSync(true)})}
 
 async function loadAll(){const d={brands:[],users:[],clients:[],orders:[],events:[],settings:[]};
 for(let from=0;;from+=1000){const{data,error}=await sb.from('records').select('id,kind,data').order('id').range(from,from+999);if(error)throw error;data.forEach(r=>{if(d[r.kind])d[r.kind].push(r.data)});if(data.length<1000)break}db=d}
@@ -329,8 +329,17 @@ const gWanted=()=>{try{return !!gcid()&&localStorage.getItem('gcal')==='1'}catch
 const gImportAll=()=>{try{return localStorage.getItem('gimport')==='1'}catch(e){return false}};
 const gMine=e=>!!e?.gcalId&&N(e.gcalOwner)===N(me?.email);
 function gInit(){const id=gcid();if(gClientFor!==id)gClient=null;if(!gClient&&id&&window.google?.accounts?.oauth2){gClient=google.accounts.oauth2.initTokenClient({client_id:id,scope:GSCOPE,callback:()=>{}});gClientFor=id}return gClient}
-// À appeler directement depuis un clic (sinon le navigateur bloque la fenêtre Google)
-function gToken(interactive){return new Promise((res,rej)=>{if(gValid())return res(gTok.t);const c=gInit();if(!c)return rej(new Error('Module Google non chargé'));
+/* Connexion permanente : la fonction serveur Supabase « google-token » garde une autorisation durable
+   et renouvelle l'accès toute seule. Si elle n'est pas installée, on garde l'ancienne méthode (1 h). */
+let gSrv=null,gSrvHas=false;
+const gSetTok=d=>{gTok={t:d.access_token,exp:Date.now()+(+d.expires_in||3600)*1000};try{localStorage.setItem('gtok',JSON.stringify(gTok));localStorage.setItem('gcal','1')}catch(e){}};
+async function gSrvCall(body){const{data,error}=await sb.functions.invoke('google-token',{body});if(error)throw Object.assign(new Error(error.message||'service indisponible'),{down:true});return data||{}}
+async function gSrvInit(){if(!gcid())return;try{const d=await gSrvCall({action:'refresh'});gSrv=true;gSrvHas=!!d.access_token;if(d.access_token)gSetTok(d)}catch(e){gSrv=false}}
+// Renvoie un accès Google valide. Sans fonction serveur, à appeler depuis un clic (sinon le navigateur bloque la fenêtre Google)
+async function gToken(interactive){if(gValid())return gTok.t;
+if(gSrv){const d=await gSrvCall({action:'refresh'}).catch(()=>({}));if(d.access_token){gSrvHas=true;gSetTok(d);return gTok.t}gSrvHas=false;if(!interactive)throw new Error('reconnexion nécessaire')}
+return gTokenPopup(interactive)}
+function gTokenPopup(interactive){return new Promise((res,rej)=>{if(gValid())return res(gTok.t);const c=gInit();if(!c)return rej(new Error('Module Google non chargé'));
 c.callback=r=>{if(r.error)return rej(new Error(r.error));gTok={t:r.access_token,exp:Date.now()+(+r.expires_in||3600)*1000};try{localStorage.setItem('gtok',JSON.stringify(gTok));localStorage.setItem('gcal','1')}catch(e){}res(gTok.t)};
 c.error_callback=e=>rej(new Error(e?.type||'fenêtre fermée'));
 c.requestAccessToken({prompt:interactive?'consent':'',hint:me?.email})})}
@@ -371,8 +380,9 @@ const loc=g.location||'';
 Object.assign(cur,{title:t,...gTimes(g),place:loc===gAddr(c)?(cur.place||''):loc,gcalEtag:g.etag});cur.crmUpdated=cur.gcalSynced=Date.now();
 putMany([['events',cur]])}
 // Synchronisation complète (sans fenêtre Google : ne tourne que si la connexion est encore valide)
-async function gSync(force){if(!gWanted()||!gValid()||gSyncing||!me||!db.users.length)return;
-if(!force&&Date.now()-gLastSync<60000)return;
+async function gSync(force){if(!gWanted()||gSyncing||!me||!db.users.length)return;
+if(!force&&Date.now()-gLastSync<50000)return;
+if(!gValid()){if(!gSrv)return;try{await gToken(false)}catch(e){return}}
 gSyncing=true;gLastSync=Date.now();let changed=0;const t=gTok.t;
 try{
 const from=new Date();from.setDate(from.getDate()-60);from.setHours(0,0,0,0);const fromIso=iso(from);
@@ -402,13 +412,13 @@ const e={id:uid(),title:g.summary||'(sans titre)',type:'Autre',userId:u?.id||'',
 db.events.push(e);await putMany([['events',e]]);await gPush(e,{quiet:1,meta:1});changed++}}
 }catch(err){console.warn('Synchro Google Agenda :',err)}
 gSyncing=false;if(changed){gEv={};if(!document.getElementById('modal').innerHTML)render()}}
-setInterval(()=>{if(document.visibilityState==='visible')gSync()},120000);
+setInterval(()=>{if(document.visibilityState==='visible')gSync()},60000);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')gSync()});
 
 /* Affichage du planning Google (événements non présents dans le CRM), semaine par semaine */
 async function gLoadRange(ws,days,force){const k=iso(ws)+'|'+days;if(!gWanted()||gLoading[k]||(!force&&Array.isArray(gEv[k])))return;
-if(!gValid()){gEv[k]=null;return}
 gLoading[k]=1;
+if(!gValid()){let okT=false;if(gSrv){try{await gToken(false);okT=true}catch(e){}}if(!okT){gEv[k]=null;delete gLoading[k];return}}
 try{const end=addDays(ws,days);
 const r=await gFetch(gTok.t,`${GAPI}?singleEvents=true&orderBy=startTime&maxResults=2500&timeMin=${encodeURIComponent(ws.toISOString())}&timeMax=${encodeURIComponent(end.toISOString())}`,'GET');
 if(r.status===401){gEv[k]=null}else{if(!r.ok)throw new Error(r.status);const j=await r.json();
@@ -424,9 +434,17 @@ function gRefresh(){gToken(false).then(async()=>{gEv={};await gSync(true);render
 function gEvLine(g){return`<div class="ev gev" onclick="event.stopPropagation();gAdd('${esc(g.gid)}','${esc(g.date)}')" title="Cliquez pour l'ajouter au CRM"><b>${g.allDay?'Journée':esc(g.start)+(g.end?'–'+esc(g.end):'')}</b> <span class="mute">· Google</span><br>${esc(g.title)}${g.place?'<br><i>'+esc(g.place)+'</i>':''}</div>`}
 function gAdd(gid,date){const g=gFind(gid,date);if(!g)return;
 editEvent(null,null,null,{title:g.title,date:g.date,start:g.start,end:g.end,place:g.place,type:cfg().eventTypes[0],clientId:findClient(g.title+' '+g.place)?.c.id||'',gcalId:g.gid,gRO:!!g.ro,link:g.link})}
-function gConnect(){gToken(true).then(async()=>{toast('✅ Google Agenda connecté');gEv={};render();await gSync(true)}).catch(e=>alert('Connexion Google impossible : '+e.message))}
+function gConnect(){if(gSrv&&window.google?.accounts?.oauth2?.initCodeClient){
+google.accounts.oauth2.initCodeClient({client_id:gcid(),scope:GSCOPE,ux_mode:'popup',login_hint:me?.email,callback:async r=>{
+if(r.error)return alert('Connexion Google annulée.');
+const d=await gSrvCall({action:'exchange',code:r.code}).catch(e=>({error:e.message}));
+if(d.error==='retry')return alert('Encore une étape : cliquez une seconde fois sur « Connecter mon Google Agenda » pour autoriser la connexion permanente.');
+if(d.error)return alert('Connexion Google impossible : '+d.error);
+gSetTok(d);gSrvHas=true;toast('✅ Google Agenda connecté en permanence');gEv={};render();gSync(true)},
+error_callback:e=>alert('Connexion Google impossible : '+(e?.type||'fenêtre fermée'))}).requestCode();return}
+gToken(true).then(async()=>{toast('✅ Google Agenda connecté');gEv={};render();await gSync(true)}).catch(e=>alert('Connexion Google impossible : '+e.message))}
 function gForget(){try{if(gTok&&window.google?.accounts?.oauth2)google.accounts.oauth2.revoke(gTok.t,()=>{});localStorage.removeItem('gtok');localStorage.removeItem('gcal')}catch(e){}gTok=null;gEv={}}
-function gDisconnect(){gForget();toast('Google Agenda déconnecté');render()}
+function gDisconnect(){if(gSrv)gSrvCall({action:'revoke'}).catch(()=>{});gSrvHas=false;gForget();toast('Google Agenda déconnecté');render()}
 function gSetImport(v){if(v&&!confirm('Tous vos événements Google des 6 prochains mois seront ajoutés au CRM, et donc visibles par toute l\'équipe. Continuer ?'))return render();
 try{localStorage.setItem('gimport',v?'1':'0')}catch(e){}if(v)gRefresh();else render()}
 async function gSyncAll(){const today=iso(new Date()),u=myUser();
@@ -436,8 +454,9 @@ try{await gToken(false)}catch(e){return toast('Google Agenda : reconnectez-vous.
 let n=0;for(const e of list)if(await gPush(e,{quiet:1}))n++;toast(`📅 ${n} / ${list.length} RDV envoyés dans Google Agenda`);render()}
 function gBar(){if(!gcid())return`<span class="mute">Google Agenda : non configuré (<a style="cursor:pointer" onclick="go('settings',{stab:'google'})">Paramètres</a>)</span>`;
 if(!gWanted())return`<button class="ghost" onclick="gConnect()">📅 Connecter mon Google Agenda</button>`;
-if(!gValid())return`<span class="gcal"><span class="down">●</span> Synchro Google en pause <button onclick="gRefresh()">🔄 Reprendre</button><button class="ghost" onclick="gDisconnect()">Déconnecter</button></span>`;
-return`<span class="gcal"><span class="up">●</span> Google Agenda synchronisé${gSyncing?' <span class="mute">(en cours…)</span>':''} <button class="ghost" onclick="gRefresh()" title="Synchroniser maintenant">↻</button><button class="ghost" onclick="gSyncAll()">Envoyer mes RDV à venir</button><label class="chip" style="margin:0" title="Ajoute au CRM tous vos événements Google des 6 prochains mois (visibles par l'équipe)"><input type="checkbox" ${gImportAll()?'checked':''} onchange="gSetImport(this.checked)">Importer tout mon planning</label><button class="ghost" onclick="gDisconnect()">Déconnecter</button></span>`}
+if(gSrv&&!gSrvHas)return`<span class="gcal"><span class="down">●</span> Connexion permanente non activée <button onclick="gConnect()">🔒 Activer</button><button class="ghost" onclick="gDisconnect()">Déconnecter</button></span>`;
+if(!gValid()&&!gSrv)return`<span class="gcal"><span class="down">●</span> Synchro Google en pause <button onclick="gRefresh()">🔄 Reprendre</button><button class="ghost" onclick="gDisconnect()">Déconnecter</button></span>`;
+return`<span class="gcal"><span class="up">●</span> Google Agenda synchronisé${gSrv?' <span class="mute">(en continu)</span>':''}${gSyncing?' <span class="mute">(en cours…)</span>':''} <button class="ghost" onclick="gRefresh()" title="Synchroniser maintenant">↻</button><button class="ghost" onclick="gSyncAll()">Envoyer mes RDV à venir</button><label class="chip" style="margin:0" title="Ajoute au CRM tous vos événements Google des 6 prochains mois (visibles par l'équipe)"><input type="checkbox" ${gImportAll()?'checked':''} onchange="gSetImport(this.checked)">Importer tout mon planning</label><button class="ghost" onclick="gDisconnect()">Déconnecter</button></span>`}
 
 /* ---------- Calculs ---------- */
 const ok=o=>o.status!=='Annulée';
