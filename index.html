@@ -206,6 +206,24 @@ code{background:#f1f5f9;padding:2px 6px;border-radius:6px;font-size:12.5px}
 .leaflet-container{font-family:Inter,sans-serif}.leaflet-popup-content{font-size:13px;line-height:1.55;margin:14px 16px}
 .leaflet-popup-content .bar{margin:10px 0 0}.leaflet-popup-content button{padding:6px 10px;font-size:12px}
 a.btnl{display:inline-block;padding:6px 10px;border:1px solid var(--line);border-radius:9px;text-decoration:none;color:var(--ink);font-size:12px;font-weight:500;background:#fff}
+.btabs{display:flex;gap:2px;overflow-x:auto;border-bottom:1px solid var(--line);margin-bottom:16px}
+.btabs a{padding:10px 12px;font-weight:600;font-size:12.5px;text-transform:uppercase;letter-spacing:.3px;color:var(--mute);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+.btabs a:hover{color:var(--ink)}.btabs a.on{color:var(--accent);border-color:var(--accent)}
+.okpis{display:grid;grid-template-columns:repeat(6,1fr);background:#fff;border:1px solid var(--line);border-radius:var(--radius);margin-bottom:16px;overflow:hidden;box-shadow:var(--shadow)}
+.okpis>div{padding:12px 14px;border-right:1px solid var(--line2);border-bottom:1px solid var(--line2);color:var(--mute);font-size:12.5px}
+.okpis b{color:var(--ink);margin-left:4px;font-size:14px}.okpis b.down{color:var(--danger)}
+@media(max-width:1200px){.okpis{grid-template-columns:repeat(3,1fr)}}@media(max-width:700px){.okpis{grid-template-columns:repeat(2,1fr)}}
+.otbl th{white-space:nowrap}.otbl th.grp{text-align:center;background:var(--accent2);color:var(--accent-d);border-left:1px solid var(--line);border-right:1px solid var(--line)}
+.otbl th.sortable{cursor:pointer}.otbl th.sortable:hover{color:var(--ink)}
+.otbl td,.otbl th{padding:7px 9px}.otbl .oname{position:sticky;left:0;background:#fff;z-index:1;min-width:200px;max-width:280px}.otbl th.oname{background:#f8fafc}
+.otbl .oname a{font-weight:600;cursor:pointer;color:var(--ink)}.otbl .oname a:hover{color:var(--accent)}
+.otbl input.oc{width:92px;text-align:right;padding:6px 8px;background:#fbfcfe}.otbl input.ocm{width:200px;padding:6px 8px}
+.otbl tr.sec td{background:#f1f4f8;font-weight:700;cursor:pointer;font-size:12px;text-transform:uppercase;letter-spacing:.3px;position:static}
+.otbl tr.tot td{font-weight:700;background:#f8fafc;border-top:2px solid var(--line)}
+.stsel{border:0;border-radius:12px;font-weight:600;font-size:12px;padding:5px 8px;cursor:pointer}
+.omenu{position:absolute;right:0;top:40px;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.12);z-index:8;min-width:240px;padding:6px}
+.omenu a{display:block;padding:9px 12px;border-radius:8px;cursor:pointer;color:var(--ink);white-space:nowrap}.omenu a:hover{background:var(--accent2)}
+.ocols .chip{margin:4px 6px 4px 0}
 </style>
 </head>
 <body>
@@ -285,7 +303,7 @@ if(p.eventType==='DELETE'){const id=p.old.id;KINDS.forEach(k=>db[k]=db[k].filter
 else{const r=p.new;if(!db[r.kind])return;const i=db[r.kind].findIndex(x=>x.id===r.id);if(i>=0)db[r.kind][i]=r.data;else db[r.kind].push(r.data)}
 refresh()}).subscribe()}
 const typing=()=>['TEXT','SEARCH','EMAIL','PASSWORD','NUMBER','TEL','DATE','TIME',''].includes((document.activeElement?.type||'').toUpperCase())&&['INPUT','TEXTAREA'].includes(document.activeElement?.tagName);
-function refresh(){clearTimeout(window._rf);window._rf=setTimeout(()=>{if(importing||document.getElementById('modal').innerHTML||document.activeElement?.id==='q'||(state.view==='settings'&&typing())){pending=true;return}render()},300)}
+function refresh(){clearTimeout(window._rf);window._rf=setTimeout(()=>{if(importing||document.getElementById('modal').innerHTML||document.activeElement?.id==='q'||document.activeElement?.id==='oq'||((state.view==='settings'||state.view==='obj')&&typing())){pending=true;return}render()},300)}
 document.addEventListener('focusout',()=>setTimeout(()=>{if(pending&&!importing&&!document.getElementById('modal').innerHTML&&!typing()){pending=false;render()}},200));
 async function logout(){await sb.auth.signOut();location.reload()}
 
@@ -434,10 +452,11 @@ function curSeason(){const ss=seasons();if(!ss.includes(state.season))state.seas
 
 /* ---------- Navigation ---------- */
 const stBadge=s=>s?`<span class="badge ${({PRISE:'b-mid',CONFIRMEE:'b-info',LIVREE:'b-vio',FACTUREE:'b-ok',ANNULEE:'b-grey'})[N(s)]||'b-grey'}">${esc(s)}</span>`:'';
-const VIEWS=[['dash','Tableau de bord'],['clients','Clients'],['orders','Commandes'],['prospect','Prospection'],['agenda','Agenda'],['settings','Paramètres']];
+const VIEWS=[['dash','Tableau de bord'],['clients','Clients'],['obj','Objectifs'],['orders','Commandes'],['prospect','Prospection'],['agenda','Agenda'],['settings','Paramètres']];
 const ICONS={
 dash:'<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
 clients:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+obj:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/>',
 orders:'<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 0 1-8 0"/>',
 prospect:'<path d="M12 22s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/>',
 agenda:'<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
@@ -448,7 +467,7 @@ settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1
 function nav(){document.getElementById('nav').innerHTML='<h1><span class="logo">M</span><span>CRM Meyaclo<small>Agence multimarque</small></span></h1>'+VIEWS.map(([k,l])=>`<a class="${state.view===k||(k==='clients'&&state.view==='client')?'on':''}" onclick="go('${k}',{from:''})"><svg viewBox="0 0 24 24">${ICONS[k]||''}</svg><span>${l}</span></a>`).join('')+`<div class="who">${linkedUser()?esc(linkedUser().name)+'<br>':''}${esc(me?.email)}<br><a onclick="logout()">Déconnexion</a></div>`}
 function go(v,extra){Object.assign(state,{view:v},extra||{});render()}
 function render(){if(_map){state.mapView={c:_map.getCenter(),z:_map.getZoom()};_map.remove();_map=null}nav();if(['brands','team','export'].includes(state.view)){state.stab=state.view==='export'?'data':state.view;state.view='settings'}
-const V={dash:vDash,clients:vClients,client:vClient,orders:vOrders,prospect:vProspect,agenda:vAgenda,settings:vSettings};document.getElementById('app').innerHTML=(V[state.view]||vDash)();
+const V={dash:vDash,clients:vClients,client:vClient,orders:vOrders,obj:vObj,prospect:vProspect,agenda:vAgenda,settings:vSettings};document.getElementById('app').innerHTML=(V[state.view]||vDash)();
 if(state.view==='prospect'&&state.ptab==='map')drawMap(window._plist||[]);
 if(state.view==='agenda'){const b=document.getElementById('tgb');if(b)b.scrollTop=state.calScroll??7*HOUR}}
 
@@ -619,7 +638,7 @@ body=`<div class="grid2"><div class="card"><h3>CA par saison</h3>${sl.map(([s,v]
 <table>${rl.map(([id,v],i)=>`<tr><td><span class="sq" style="background:${COLORS[i%COLORS.length]}"></span>${esc(byId('brands',id)?.name||'?')}</td><td class="n mute">${(v/rt*100).toFixed(1)} %</td><td class="n"><b>${eur2(v)}</b></td></tr>`).join('')||'<tr><td class="mute">Aucun CA.</td></tr>'}${rl.length?`<tr class="tot"><td>Total</td><td></td><td class="n">${eur2(rt)}</td></tr>`:''}</table></div></div>`}
 
 const nxD=nx?new Date(nx.date+'T00:00').toLocaleDateString('fr-FR'):'';
-return`<div class="bar">${state.from==='prospect'?`<button class="ghost" onclick="go('prospect',{from:''})">← Prospection</button>`:''}${state.from==='agenda'?`<button class="ghost" onclick="go('agenda',{from:''})">← Agenda</button>`:''}<button class="ghost" onclick="go('clients',{from:''})">← Clients</button></div>
+return`<div class="bar">${state.from==='prospect'?`<button class="ghost" onclick="go('prospect',{from:''})">← Prospection</button>`:''}${state.from==='agenda'?`<button class="ghost" onclick="go('agenda',{from:''})">← Agenda</button>`:''}${state.from==='obj'?`<button class="ghost" onclick="go('obj',{from:''})">← Objectifs</button>`:''}<button class="ghost" onclick="go('clients',{from:''})">← Clients</button></div>
 <div class="ch"><div class="av">${esc(ini)}</div><div style="flex:1;min-width:0"><h2>${esc(c.name)}</h2><div class="sub">${esc(c.city||'')}${c.city?' · ':''}${tot?'<span class="up">●</span> Client':'<span class="mute">●</span> Prospect'}${c.dept?' · '+esc(c.dept):''}</div></div>
 <button class="ibtn" title="Exporter la fiche (Excel)" onclick="exportClient('${c.id}')">⤓</button><button class="ibtn" title="Modifier les informations" onclick="editClient('${c.id}')">⚙️</button><button class="ibtn red" title="Supprimer le client" onclick="cDelete('${c.id}')">🗑️</button></div>
 <div class="ck">${K('#b9770e','☆ Top marque',top?byId('brands',top[0])?.name||'?':'—',top?`${eur(top[1])} · ${Math.round(top[1]/tot*100)} % du CA`:'Aucune commande')}
@@ -629,6 +648,140 @@ ${K('#1d3557','Panier moyen',oks.length?eur(tot/oks.length):'—',`sur ${oks.len
 ${K('#5b2245','Prochain RDV',nx?(nx.start||'Journée'):'—',nx?nxD+(byId('brands',nx.brandId)?' · '+byId('brands',nx.brandId).name:nx.title?' · '+nx.title:''):'Aucun RDV prévu')}</div>
 <div class="tabs">${TABS.map(([k,l])=>`<a class="${T===k?'on':''}" onclick="cTab('${k}')">${l}</a>`).join('')}</div>${body}`}
 
+
+/* ---------- Objectifs : par marque et par saison, saisie directe des objectifs et des commandes ---------- */
+const OBJ_ST=[['A planifier','b-info'],['A rappeler','b-mid'],['RDV pris','b-vio'],['Commandé','b-ok'],['Pas intéressé','b-grey'],['Perdu','b-no']];
+const OBJ_COLS=[['city','Ville',0],['zip','Code postal',0],['sector','Secteur',0],['user','Commercial',0],['prev1','Réalisé saison précédente',0],['n1','Réalisé N-1',1],['obj','Objectif',1],['real','Réalisé',1],['land','Atterrissage',0],['pct','% atteinte',1],['rdv','RDV',0],['status','Statut',1],['comment','Commentaire',1]];
+function oCols(){let s=null;try{s=JSON.parse(localStorage.getItem('objCols')||'null')}catch(e){}const o={};OBJ_COLS.forEach(([k,,d])=>o[k]=s&&k in s?!!s[k]:!!d);return o}
+function oColToggle(k){const c=oCols();c[k]=!c[k];try{localStorage.setItem('objCols',JSON.stringify(c))}catch(e){}render()}
+function oColReset(){try{localStorage.removeItem('objCols')}catch(e){}render()}
+function oSeasons(){return[...new Set([...seasons(),sShift(SEASON_NOW,1),SEASON_NOW,state.oSeason].filter(Boolean))].sort((a,b)=>sVal(b)-sVal(a)).slice(0,9)}
+const oKey=(S,B)=>S+'|'+B;
+const oPlan=(c,S,B)=>(c.plans||{})[oKey(S,B)]||null;
+const r2=v=>Math.round((+v||0)*100)/100;
+const oNum=v=>v?String(r2(v)).replace('.',','):'';
+
+function oRows(S,B){const P=sPrev(S),S1=sShift(S,-1),S2=sShift(S,-2);
+const byC=new Map();for(const o of db.orders){if(o.brandId!==B||!ok(o))continue;let a=byC.get(o.clientId);if(!a)byC.set(o.clientId,a=[]);a.push(o)}
+const rdvBy=new Map();for(const e of db.events){if(!e.clientId||e.status==='Annulé'||evSeason(e)!==S)continue;const a=rdvBy.get(e.clientId);if(!a||e.date<a.date)rdvBy.set(e.clientId,e)}
+const out=[];
+for(const c of db.clients){const os=byC.get(c.id)||[],pl=oPlan(c,S,B);
+const sum=(f,flt)=>r2(os.reduce((s,o)=>flt(o)?s+(+o[f]||0):s,0));
+const prev1=sum('amount',o=>o.season===S1),prev2=sum('amount',o=>o.season===S2),inS=os.some(o=>o.season===S);
+const active=prev1>0||prev2>0;if(!active&&!inS&&!pl)continue;
+const t=k=>o=>o.season===S&&(o.type||'')===k,all=o=>o.season===S;
+const r={c,pl,active,inS,prev1,
+n1:sum('amount',o=>o.season===P)||sum('n1',all),
+objI:sum('objective',t('INITIAL')),objR:sum('objective',t('REASSORT')),objT:sum('objective',all),
+realI:sum('amount',t('INITIAL')),realR:sum('amount',t('REASSORT')),realT:sum('amount',all),rdv:rdvBy.get(c.id)||null};
+r.land=Math.max(r.realT,r.objT);
+r.status=pl?.status||(r.realT>0?'Commandé':r.rdv?'RDV pris':'A planifier');
+r.hasRdv=!!r.rdv||['RDV pris','Commandé'].includes(r.status);
+r.group=r.status==='Perdu'?'lost':active?'act':'new';
+out.push(r)}
+return out}
+
+function oSort(k){if(state.oSortK===k)state.oSortD=-(state.oSortD||1);else{state.oSortK=k;state.oSortD=k==='name'?1:-1}render()}
+function vObj(){
+const SS=oSeasons();if(!state.oSeason||!SS.includes(state.oSeason))state.oSeason=SS.includes(SEASON_NOW)?SEASON_NOW:SS[0];const S=state.oSeason;
+const brands=[...db.brands].sort((a,b)=>a.name.localeCompare(b.name));
+if(!brands.length)return`<h2>Objectifs</h2><div class="card"><p class="mute">Ajoutez d'abord des marques (Paramètres → Marques).</p></div>`;
+if(!state.oBrand||!byId('brands',state.oBrand))state.oBrand=(brands.find(b=>db.orders.some(o=>o.brandId===b.id&&ok(o)&&(o.season===S||o.season===sShift(S,-2))))||brands[0]).id;
+const B=state.oBrand,brand=byId('brands',B),P=sPrev(S),S1=sShift(S,-1),C=oCols();
+let rows=oRows(S,B);const all=rows;
+const q=N(state.oQ);if(q)rows=rows.filter(r=>N([r.c.name,r.c.city,r.c.hq].join(' ')).includes(q));
+if(state.oUser)rows=rows.filter(r=>(r.c.userId||'')===state.oUser||db.orders.some(o=>o.clientId===r.c.id&&o.brandId===B&&o.season===S&&o.userId===state.oUser));
+if(state.oSt)rows=rows.filter(r=>r.status===state.oSt);
+const sk=state.oSortK||'name',sd=state.oSortD||1;
+rows.sort((a,b)=>sk==='name'?sd*(a.c.name||'').localeCompare(b.c.name||''):sd*((a[sk]||0)-(b[sk]||0))||(a.c.name||'').localeCompare(b.c.name||''));
+// Indicateurs (sur toute la liste de la marque, hors filtres)
+const T=f=>all.reduce((s,r)=>s+(r[f]||0),0),ob=T('objT'),re=T('realT'),n1=T('n1'),land=T('land');
+const act=all.filter(r=>r.group==='act'),nw=all.filter(r=>r.group==='new'),lost=all.filter(r=>r.group==='lost');
+const withR=all.filter(r=>r.group!=='lost'&&r.hasRdv),live=all.filter(r=>r.group!=='lost');
+const money=v=>`<b class="${v<0?'down':''}" style="background:none">${eur(v)}</b>`;
+const kpis=`<div class="okpis">
+<div>Objectif annoncé <b>${eur(ob)}</b></div><div>CA à ce jour <b>${eur(re)}</b></div><div>Écart objectif ${money(re-ob)}</div><div>Nouveaux contacts <b>${nw.length}</b></div><div>Actifs sans RDV <b>${act.filter(r=>!r.hasRdv).length}</b></div><div>Prise de RDV <b>${live.length?Math.round(withR.length/live.length*100):0} %</b></div>
+<div>Atterrissage <b>${eur(land)}</b></div><div>% atteinte <b>${ob?(re/ob*100).toFixed(1).replace('.',','):'0'} %</b></div><div>Écart ${esc(P)} (N-1) ${money(re-n1)}</div><div>Contacts perdus <b>${lost.length}</b></div><div>Nouveaux sans RDV <b>${nw.filter(r=>!r.hasRdv).length}</b></div><div>Contacts avec RDV <b>${withR.length}</b> <span class="mute">(${withR.filter(r=>r.group==='act').length} actif · ${withR.filter(r=>r.group==='new').length} nouveau)</span></div></div>`;
+// En-têtes
+const sh=(k,l,cls='n')=>`<th class="${cls} sortable" onclick="oSort('${k}')">${l}${sk===k?(sd>0?' ↑':' ↓'):''}</th>`;
+const simple=[['city','Ville'],['zip','CP'],['sector','Secteur'],['user','Commercial']].filter(([k])=>C[k]);
+let h1=`<tr><th rowspan="2" class="sortable oname" onclick="oSort('name')">Nom${sk==='name'?(sd>0?' ↑':' ↓'):''}</th>${simple.map(([,l])=>`<th rowspan="2">${l}</th>`).join('')}`,h2='<tr>';
+if(C.prev1)h1+=`<th rowspan="2" class="n sortable" onclick="oSort('prev1')">Réalisé ${esc(S1)}${sk==='prev1'?(sd>0?' ↑':' ↓'):''}</th>`;
+if(C.n1)h1+=`<th rowspan="2" class="n sortable" onclick="oSort('n1')">Réalisé ${esc(P)}<br><span class="mute" style="text-transform:none">N-1</span>${sk==='n1'?(sd>0?' ↑':' ↓'):''}</th>`;
+if(C.obj){h1+=`<th colspan="3" class="grp">Objectif ${esc(S)}</th>`;h2+=`<th class="n">Initial</th><th class="n">Réassort</th>${sh('objT','Total')}`}
+if(C.real){h1+=`<th colspan="3" class="grp">Réalisé ${esc(S)}</th>`;h2+=`<th class="n">Initial</th><th class="n">Réassort</th>${sh('realT','Total')}`}
+if(C.land)h1+=`<th rowspan="2" class="n sortable" onclick="oSort('land')">Atterrissage${sk==='land'?(sd>0?' ↑':' ↓'):''}</th>`;
+if(C.pct)h1+='<th rowspan="2" class="n">% obj.</th>';
+if(C.rdv)h1+='<th rowspan="2">RDV</th>';
+if(C.status)h1+='<th rowspan="2">Statut</th>';
+if(C.comment)h1+='<th rowspan="2">Commentaire</th>';
+h1+='<th rowspan="2"></th></tr>';h2+='</tr>';
+const ncol=1+simple.length+(C.prev1?1:0)+(C.n1?1:0)+(C.obj?3:0)+(C.real?3:0)+(C.land?1:0)+(C.pct?1:0)+(C.rdv?1:0)+(C.status?1:0)+(C.comment?1:0)+1;
+const inp=(kind,type,v,cid)=>`<input class="oc" id="o-${kind}-${type}-${cid}" inputmode="decimal" value="${oNum(v)}" onfocus="this.select()" onkeydown="if(event.key==='Enter')this.blur()" onchange="objCell('${cid}','${kind}','${type}',this.value)">`;
+const row=r=>{const c=r.c,u=byId('users',c.userId);
+const stc=(OBJ_ST.find(x=>x[0]===r.status)||[,'b-grey'])[1];
+return`<tr><td class="oname"><a onclick="go('client',{clientId:'${c.id}',from:'obj'})">${esc(c.name)}</a>${c.city&&!C.city?`<div class="mute" style="font-size:11.5px">${esc(c.city)}</div>`:''}</td>
+${simple.map(([k])=>`<td>${esc(k==='user'?u?.name:c[k])}</td>`).join('')}
+${C.prev1?`<td class="n">${r.prev1?eur(r.prev1):''}</td>`:''}${C.n1?`<td class="n"><b>${r.n1?eur(r.n1):''}</b></td>`:''}
+${C.obj?`<td class="n">${inp('obj','INITIAL',r.objI,c.id)}</td><td class="n">${inp('obj','REASSORT',r.objR,c.id)}</td><td class="n"><b>${r.objT?eur(r.objT):''}</b></td>`:''}
+${C.real?`<td class="n">${inp('real','INITIAL',r.realI,c.id)}</td><td class="n">${inp('real','REASSORT',r.realR,c.id)}</td><td class="n"><b>${r.realT?eur(r.realT):''}</b></td>`:''}
+${C.land?`<td class="n">${r.land?eur(r.land):''}</td>`:''}${C.pct?`<td class="n">${pct(r.realT,r.objT)}</td>`:''}
+${C.rdv?`<td>${r.rdv?`<a onclick="evPeek('${r.rdv.id}')" style="cursor:pointer">📅 ${esc(fmtD(r.rdv.date))}</a>`:`<button class="ibtn" title="Planifier un RDV" onclick="editEvent(null,'${c.id}')">＋📅</button>`}</td>`:''}
+${C.status?`<td><select class="stsel ${stc}" onchange="objPlan('${c.id}',{status:this.value})">${OBJ_ST.map(([s])=>`<option ${s===r.status?'selected':''}>${s}</option>`).join('')}</select></td>`:''}
+${C.comment?`<td><input class="ocm" id="o-cm-${c.id}" value="${esc(r.pl?.comment||'')}" placeholder="…" onkeydown="if(event.key==='Enter')this.blur()" onchange="objPlan('${c.id}',{comment:this.value})"></td>`:''}
+<td class="n" style="white-space:nowrap"><button class="ibtn" title="Saisir une commande détaillée" onclick="editOrder(null,'${c.id}',{brandId:'${B}',season:'${S}',type:'INITIAL'})">🛒</button>${!r.inS&&!r.active&&r.pl?`<button class="ibtn red" title="Retirer de la liste" onclick="objDrop('${c.id}')">✕</button>`:''}</td></tr>`};
+const fold=state.oFold||{};
+const sec=(k,l,list)=>list.length?`<tr class="sec" onclick="state.oFold={...(state.oFold||{}),${k}:!(state.oFold||{}).${k}};render()"><td colspan="${ncol}">${fold[k]?'▸':'▾'} ${l} (${list.length}) <span class="mute" style="font-weight:500;text-transform:none;margin-left:10px">Obj. ${eur(list.reduce((s,r)=>s+r.objT,0))} · Réalisé ${eur(list.reduce((s,r)=>s+r.realT,0))} · N-1 ${eur(list.reduce((s,r)=>s+r.n1,0))}</span></td></tr>${fold[k]?'':list.map(row).join('')}`:'';
+const F=f=>rows.reduce((s,r)=>s+(r[f]||0),0);
+const foot=`<tr class="tot"><td>Total (${rows.length})</td>${simple.map(()=>'<td></td>').join('')}${C.prev1?`<td class="n">${eur(F('prev1'))}</td>`:''}${C.n1?`<td class="n">${eur(F('n1'))}</td>`:''}${C.obj?`<td class="n">${eur(F('objI'))}</td><td class="n">${eur(F('objR'))}</td><td class="n">${eur(F('objT'))}</td>`:''}${C.real?`<td class="n">${eur(F('realI'))}</td><td class="n">${eur(F('realR'))}</td><td class="n">${eur(F('realT'))}</td>`:''}${C.land?`<td class="n">${eur(F('land'))}</td>`:''}${C.pct?`<td class="n">${pct(F('realT'),F('objT'))}</td>`:''}${C.rdv?'<td></td>':''}${C.status?'<td></td>':''}${C.comment?'<td></td>':''}<td></td></tr>`;
+const colsPanel=state.oColsOpen?`<div class="card ocols"><div class="bar" style="margin:0 0 8px"><b>Afficher / masquer les colonnes</b><span style="flex:1"></span><button class="ghost" onclick="oColReset()">↺ Réinitialiser</button><button class="ghost" onclick="state.oColsOpen=false;render()">Fermer</button></div>${OBJ_COLS.map(([k,l])=>`<label class="chip"><input type="checkbox" ${C[k]?'checked':''} onchange="oColToggle('${k}')"> ${l}</label>`).join('')}<p class="mute" style="margin:8px 0 0">Réglage mémorisé sur cet appareil, valable pour toutes les marques.</p></div>`:'';
+const menu=state.oMenu?`<div class="omenu" onclick="event.stopPropagation()"><a onclick="state.oMenu=false;objAdd()">＋ Ajouter un client</a><a onclick="state.oMenu=false;objAuto()">◎ Calcul auto des objectifs</a><a onclick="state.oMenu=false;objExport()">⤓ Exporter (Excel)</a><a onclick="state.oMenu=false;state.oColsOpen=true;render()">⚙ Colonnes</a></div>`:'';
+return`<div class="seg" style="margin-bottom:14px">${SS.map(s=>`<button class="${s===S?'on':''}" onclick="state.oSeason='${s}';render()">${s}</button>`).join('')}</div>
+<div class="btabs">${brands.map(b=>`<a class="${b.id===B?'on':''}" onclick="state.oBrand='${b.id}';render()">${esc(b.name)}</a>`).join('')}</div>
+<div class="bar"><h2 style="margin:0">Objectifs ${esc(brand.name)} · ${esc(S)}</h2><span class="mute">N-1 = ${esc(P)}</span></div>
+${kpis}
+<div class="bar"><span class="mute">${rows.length} contact${rows.length>1?'s':''}</span><input id="oq" placeholder="🔍 Rechercher un nom, une ville" value="${esc(state.oQ||'')}" oninput="state.oQ=this.value;clearTimeout(window._t);window._t=setTimeout(()=>{render();const i=document.getElementById('oq');i.focus();i.setSelectionRange(i.value.length,i.value.length)},300)">
+<select onchange="state.oUser=this.value;render()"><option value="">Tous commerciaux</option>${db.users.map(u=>`<option value="${u.id}" ${state.oUser===u.id?'selected':''}>${esc(u.name)}</option>`).join('')}</select>
+<select onchange="state.oSt=this.value;render()"><option value="">Tous statuts</option>${OBJ_ST.map(([s])=>`<option ${state.oSt===s?'selected':''}>${s}</option>`).join('')}</select>
+<span style="flex:1"></span><button onclick="objAdd()">＋ Ajouter un client</button><span style="position:relative"><button class="ghost" onclick="event.stopPropagation();state.oMenu=!state.oMenu;render()">Actions ▾</button>${menu}</span></div>
+${colsPanel}
+<div class="card" id="owrap" style="padding:0"><table class="otbl"><thead>${h1}${h2}</thead><tbody>
+${sec('act','Contacts actifs',rows.filter(r=>r.group==='act'))}${sec('new','Contacts nouveaux',rows.filter(r=>r.group==='new'))}${sec('lost','Contacts perdus',rows.filter(r=>r.group==='lost'))}
+${rows.length?'':`<tr><td colspan="${ncol}" class="mute" style="padding:20px">Aucun contact pour ${esc(brand.name)} sur cette période. Ajoutez des clients avec « ＋ Ajouter un client ».</td></tr>`}
+</tbody><tfoot>${foot}</tfoot></table></div>
+<p class="mute">Saisissez directement les objectifs et le réalisé (commandes) en Initial / Réassort : chaque montant est enregistré comme ligne de commande du client pour ${esc(brand.name)} ${esc(S)}. 🛒 ouvre la fiche commande complète (n° de commande, livraison, pièces…). « Actifs » = clients ayant commandé la marque sur l'une des deux saisons précédentes (${esc(S1)}, ${esc(sShift(S,-2))}).</p>`}
+
+/* Enregistre un montant saisi dans le tableau (objectif ou réalisé, par type) */
+function objSetVal(cid,kind,type,val,S,B){const f=kind==='obj'?'objective':'amount',v=r2(num(val));
+const list=db.orders.filter(o=>o.clientId===cid&&o.brandId===B&&o.season===S&&(o.type||'')===type&&ok(o));
+const cur=r2(list.reduce((s,o)=>s+(+o[f]||0),0));if(cur===v)return[];
+if(list.length){const rest=r2(cur-(+list[0][f]||0));if(v>=rest)list[0][f]=r2(v-rest);else{list.forEach(o=>o[f]=0);list[0][f]=v}
+if(kind==='real'&&list[0].status==='Prise'&&v>0)list[0].status='Confirmée';return list}
+if(!v)return[];
+const c=byId('clients',cid),b=byId('brands',B),u=byId('users',c?.userId)||myUser();
+const o={id:uid(),clientId:cid,brandId:B,season:S,type,userId:u?.id||'',amount:0,objective:0,n1:0,[f]:v,status:kind==='real'?'Confirmée':'Prise',date:kind==='real'?iso(new Date()):seasonDate(S),delivery:'',ref:'',notes:kind==='obj'?'Objectif saisi dans Objectifs':'Saisi dans Objectifs',ikey:[S,N(b?.name),N(c?.name),type,N(u?.name)].join('|')};
+db.orders.push(o);return[o]}
+function oRerender(){const w=document.getElementById('owrap'),sl=w?w.scrollLeft:0;setTimeout(()=>{const a=document.activeElement?.id;render();const w2=document.getElementById('owrap');if(w2)w2.scrollLeft=sl;if(a){const el=document.getElementById(a);if(el){el.focus();el.select?.()}}},0)}
+function objCell(cid,kind,type,val){const ch=objSetVal(cid,kind,type,val,state.oSeason,state.oBrand);if(ch.length)putMany(ch.map(o=>['orders',o]));oRerender()}
+function objPlan(cid,d){const c=byId('clients',cid);if(!c)return;const k=oKey(state.oSeason,state.oBrand);c.plans={...(c.plans||{})};c.plans[k]={...(c.plans[k]||{}),...d};putMany([['clients',c]]);oRerender()}
+function objDrop(cid){const c=byId('clients',cid);if(!c||!confirm('Retirer '+c.name+' de cette liste ?'))return;const k=oKey(state.oSeason,state.oBrand);c.plans={...(c.plans||{})};delete c.plans[k];putMany([['clients',c]]);render()}
+function objAdd(){const S=state.oSeason,B=state.oBrand,inL=new Set(oRows(S,B).map(r=>r.c.id));
+const opts=sortedClients().filter(c=>!inL.has(c.id));if(!opts.length)return alert('Tous les clients sont déjà dans la liste.');
+form(`Ajouter un client — ${esc(byId('brands',B)?.name)} ${esc(S)}`,[{k:'clientId',l:'Client / prospect',t:'select',o:opts.map(c=>[c.id,c.name+(c.city?' — '+c.city:'')])},{k:'status',l:'Statut',t:'select',o:OBJ_ST.map(([s])=>[s,s])},{k:'objective',l:'Objectif initial (€, optionnel)',t:'number'},{k:'comment',l:'Commentaire',t:'area'}],{status:'A planifier'},
+d=>{const c=byId('clients',d.clientId);if(!c)return;const k=oKey(S,B);c.plans={...(c.plans||{})};c.plans[k]={status:d.status,comment:d.comment||'',added:iso(new Date())};const items=[['clients',c]];
+if(d.objective)objSetVal(c.id,'obj','INITIAL',d.objective,S,B).forEach(o=>items.push(['orders',o]));putMany(items)})}
+function objAuto(){const S=state.oSeason,B=state.oBrand,rows=oRows(S,B).filter(r=>r.group!=='lost'&&!r.objT&&r.n1);
+if(!rows.length)return alert(`Aucun client sans objectif avec un réalisé ${sPrev(S)} (N-1) pour cette marque.`);
+const p=prompt(`Calcul auto pour ${rows.length} client(s) sans objectif :\nobjectif Initial = réalisé ${sPrev(S)} (N-1) + x %\n\nIndiquez x (ex. 5, 0 ou -10) :`,'0');if(p===null)return;const x=num(p);
+const items=[];rows.forEach(r=>objSetVal(r.c.id,'obj','INITIAL',Math.round(r.n1*(1+x/100)),S,B).forEach(o=>items.push(['orders',o])));
+putMany(items).then(okS=>{if(okS)toast(`✅ ${rows.length} objectif(s) calculé(s)`)});render()}
+function objExport(){if(typeof XLSX==='undefined')return alert('Module Excel non chargé (connexion internet requise).');
+const S=state.oSeason,B=state.oBrand,bn=byId('brands',B)?.name||'',P=sPrev(S),S1=sShift(S,-1);
+const G={act:'Actif',new:'Nouveau',lost:'Perdu'};
+const data=oRows(S,B).sort((a,b)=>a.group.localeCompare(b.group)||(a.c.name||'').localeCompare(b.c.name||'')).map(r=>({Groupe:G[r.group],Client:r.c.name,Ville:r.c.city,CP:r.c.zip,Commercial:byId('users',r.c.userId)?.name||'',[`Réalisé ${S1}`]:r.prev1,[`Réalisé ${P} (N-1)`]:r.n1,[`Objectif ${S} Initial`]:r.objI,[`Objectif ${S} Réassort`]:r.objR,[`Objectif ${S} Total`]:r.objT,[`Réalisé ${S} Initial`]:r.realI,[`Réalisé ${S} Réassort`]:r.realR,[`Réalisé ${S} Total`]:r.realT,Atterrissage:r.land,'% atteinte':r.objT?Math.round(r.realT/r.objT*100):'',RDV:r.rdv?.date||'',Statut:r.status,Commentaire:r.pl?.comment||''}));
+const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(data.length?data:[{}]),(bn+' '+S).slice(0,31).replace(/[\\/?*[\]:]/g,' '));
+XLSX.writeFile(wb,`Objectifs_${bn.replace(/\W+/g,'_')}_${S}.xlsx`)}
+document.addEventListener('click',()=>{if(state.oMenu){state.oMenu=false;render()}});
 
 function vOrders(){const ss=seasons();
 const os=db.orders.filter(o=>(!state.fBrand||o.brandId===state.fBrand)&&(!state.fClient||o.clientId===state.fClient)&&(!state.fSeason||o.season===state.fSeason)&&(!state.fUser||o.userId===state.fUser)&&(!state.fType||o.type===state.fType)).sort(orderSort);
@@ -853,7 +1006,7 @@ function editClient(id,preset){const c=id?byId('clients',id):null;form(id?'Modif
 c||{visited:'Non',...(preset||{})},d=>{d.dept=d.dept||(d.zip||'').slice(0,2);const o=upsert('clients',id,d);if(needGeo(o))setTimeout(()=>geoRun([o]),50)},
 id?()=>{if(db.orders.some(o=>o.clientId===id)){alert('Ce client a des commandes : supprimez-les d\'abord.');return false}remove('clients',id);state.view='clients'}:null,'',{wide:1})}
 
-function editOrder(id,clientId){if(!db.clients.length){alert('Créez d\'abord un client.');return}
+function editOrder(id,clientId,preset){if(!db.clients.length){alert('Créez d\'abord un client.');return}
 const me_u=myUser(),cur=id?byId('orders',id):null;
 form(id?'Modifier la commande':'Nouvelle commande',[
 {k:'clientId',l:'Client',t:'select',o:sortedClients().map(c=>[c.id,c.name+(c.city?' — '+c.city:'')])},
@@ -870,7 +1023,7 @@ form(id?'Modifier la commande':'Nouvelle commande',[
 {k:'delivery',l:'Livraison prévue',t:'date'},
 {k:'ref',l:'N° de commande'},
 {k:'notes',l:'Notes',t:'area'}],
-id?byId('orders',id):{clientId,date:iso(new Date()),status:'Prise',season:state.season,userId:me_u?.id},d=>{d.season=(d.season||'').toUpperCase().replace(/\s/g,'');d.date=d.date||seasonDate(d.season);upsert('orders',id,d)},id?()=>remove('orders',id):null)}
+id?byId('orders',id):{clientId,date:iso(new Date()),status:'Prise',season:state.season,userId:me_u?.id,...(preset||{})},d=>{d.season=(d.season||'').toUpperCase().replace(/\s/g,'');d.date=d.date||seasonDate(d.season);upsert('orders',id,d)},id?()=>remove('orders',id):null)}
 
 const cScore=c=>['email','contact','phone','address','mobile'].filter(k=>c[k]).length;
 function findClient(text){const t=N(text);if(t.length<4)return null;let best=null;
