@@ -2,7 +2,15 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0e7490">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Meyaclo">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>CRM Meyaclo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -225,11 +233,93 @@ a.btnl{display:inline-block;padding:6px 10px;border:1px solid var(--line);border
 .omenu a{display:block;padding:9px 12px;border-radius:8px;cursor:pointer;color:var(--ink);white-space:nowrap}.omenu a:hover{background:var(--accent2)}
 .ocols .chip{margin:4px 6px 4px 0}
 .legal h4{margin:18px 0 6px;font-size:14px}.legal ul{padding-left:20px;margin:6px 0}
+
+/* =================== VERSION TÉLÉPHONE =================== */
+#mob,.m-only,.m-col{display:none}
+.mact{display:inline-flex;align-items:center;justify-content:center;gap:6px;background:#fff;border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:0 12px;min-height:40px;font-size:13px;font-weight:600;text-decoration:none;white-space:nowrap}
+.mact.dis{opacity:.35;pointer-events:none}
+.mact.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.sheet-list{display:flex;flex-direction:column;gap:6px}
+.sheet-list a{display:flex;align-items:center;gap:14px;padding:14px 12px;border-radius:12px;font-size:16px;font-weight:500;color:var(--ink);text-decoration:none;cursor:pointer;background:#f6f8fb}
+.sheet-list a i{font-style:normal;font-size:20px;width:28px;text-align:center}
+.sheet-list a small{display:block;color:var(--mute);font-size:12.5px;font-weight:400;margin-top:2px}
+.sheet-who{padding:10px 4px 14px;color:var(--mute);font-size:13px;word-break:break-all}
+@media(max-width:800px){
+html{-webkit-text-size-adjust:100%}
+body{display:block;padding-top:env(safe-area-inset-top)}
+nav{display:none!important}
+main{padding:14px 12px calc(96px + env(safe-area-inset-bottom));overflow:visible}
+h2{font-size:21px;margin-bottom:12px}
+#mob{display:block}
+#tabbar{position:fixed;left:0;right:0;bottom:0;z-index:1500;display:flex;background:rgba(255,255,255,.97);backdrop-filter:blur(8px);border-top:1px solid var(--line);padding:2px 2px env(safe-area-inset-bottom)}
+#tabbar a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-height:56px;color:var(--mute);font-size:10.5px;font-weight:600;text-decoration:none;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#tabbar a svg{width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#tabbar a.on{color:var(--accent)}
+#fab{position:fixed;right:16px;bottom:calc(72px + env(safe-area-inset-bottom));z-index:1500;width:58px;height:58px;border-radius:50%;background:var(--accent);color:#fff;font-size:32px;font-weight:300;line-height:1;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(14,116,144,.45);cursor:pointer;-webkit-tap-highlight-color:transparent}
+#toast{left:12px;right:12px;bottom:calc(140px + env(safe-area-inset-bottom));max-width:none}
+.m-only{display:flex}.m-col{display:table-cell}
+/* confort tactile + pas de zoom automatique sur iPhone (champs >= 16 px) */
+input,select,textarea{font-size:16px!important;min-height:44px}
+input[type=checkbox],input[type=radio]{min-height:0;width:20px;height:20px}
+input[type=color]{min-height:44px}
+textarea{min-height:110px}
+button{min-height:42px}
+.ibtn{min-width:42px;height:42px}
+.seg button{min-height:38px}
+.bar{gap:8px}
+.bar>input,.bar>select{flex:1 1 140px;min-width:0}
+#q{min-width:0!important;flex:1 1 100%!important}
+.kpis{grid-template-columns:1fr 1fr;gap:10px}
+.kpi{padding:12px 14px}.kpi b{font-size:20px}
+.ck{grid-template-columns:1fr 1fr;gap:10px}
+.ck>div:last-child:nth-child(odd){grid-column:1/-1}
+.ch{padding:14px;gap:12px}
+.ch h2{font-size:19px;margin:0}
+.tabs{margin-left:-12px;margin-right:-12px;padding:0 6px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tabs a{padding:12px 12px}
+.card{padding:14px;border-radius:12px}
+.cal{height:calc(100dvh - 120px - env(safe-area-inset-top) - env(safe-area-inset-bottom))}
+#pmap{height:calc(100dvh - 300px);min-height:360px}
+/* actions rapides */
+.m-actions{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:0 0 14px}
+.m-actions .mact{flex-direction:column;gap:3px;padding:8px 2px;min-height:62px;font-size:11.5px}
+.m-actions .mact span{font-size:20px}
+.m-rowact{display:flex;gap:8px;flex-wrap:wrap;padding-top:8px}
+.m-rowact .mact{flex:1}
+/* fenêtres : plein écran, bouton Enregistrer toujours visible */
+.modal{align-items:stretch;backdrop-filter:none}
+.modal .box,.modal .box.wide{width:100%!important;max-width:none;height:100%;max-height:none;border-radius:0;padding:calc(16px + env(safe-area-inset-top)) 16px 0;animation:slideup .2s}
+.modal .box>h3{font-size:19px;margin:0 0 14px;padding-right:44px}
+.modal #fm>.bar:last-child{position:sticky;bottom:0;background:#fff;margin:16px -16px 0!important;padding:10px 16px calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--line);z-index:3;flex-wrap:nowrap}
+.modal #fm>.bar:last-child button[type=submit]{flex:1;min-height:48px;font-size:15px}
+.modal #fm>.bar:last-child button{min-height:48px}
+.modal .box.peek,.modal .box.sheetbox{height:auto;max-height:88vh;margin-top:auto;border-radius:18px 18px 0 0;padding:10px 16px calc(18px + env(safe-area-inset-bottom))}
+.m-close{position:absolute;top:calc(10px + env(safe-area-inset-top));right:10px;width:40px;height:40px;min-height:40px;border-radius:50%;background:#f1f3f6;color:var(--ink);font-size:20px;padding:0;z-index:4}
+.sheetbox .grab{width:40px;height:5px;border-radius:3px;background:#d5dae2;margin:2px auto 12px}
+/* tableaux affichés en cartes */
+table.mcards,table.mcards tbody{display:block;width:100%}
+table.mcards tr.mhead{display:none}
+table.mcards tr{display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin-bottom:8px;box-shadow:var(--shadow)}
+table.mcards tr.click:active{background:var(--accent2)}
+table.mcards td,table.mcards th{display:flex;justify-content:space-between;align-items:center;gap:12px;border:0;padding:4px 0;text-align:right;background:none;font-size:14px;text-transform:none;letter-spacing:0;color:var(--ink);white-space:normal}
+table.mcards td::before,table.mcards th::before{content:attr(data-label);color:var(--mute);font-size:12.5px;font-weight:500;text-align:left;flex-shrink:0}
+table.mcards .mtitle{order:-1;font-size:15.5px;font-weight:600;justify-content:flex-start;text-align:left;padding-bottom:6px}
+table.mcards .mtitle::before{display:none}
+table.mcards td[colspan]{justify-content:flex-start;text-align:left}
+table.mcards .mempty{display:none}
+table.mcards td.m-col{display:block;padding:6px 0 0}
+table.mcards td.m-col::before{display:none}
+table.mcards tr.tot{background:#f6f8fb}
+.card:has(>table.mcards){background:transparent;border:0;box-shadow:none;padding:0;overflow:visible}
+}
+@keyframes slideup{from{transform:translateY(24px);opacity:0}}
 </style>
 </head>
 <body>
 <nav id="nav" style="display:none"></nav>
 <main id="app"><p class="mute">Chargement…</p></main>
+<div id="mob"></div>
 <div id="modal"></div>
 <div id="toast"></div>
 <script>
@@ -282,7 +372,7 @@ const okS=await putMany([['settings',o]]);if(okS)toast('✅ Paramètres enregist
 const withCur=(list,cur)=>[...new Set([...list,cur].filter(Boolean))];
 
 /* ---------- Connexion & synchronisation Supabase ---------- */
-function vLogin(msg){document.getElementById('nav').style.display='none';
+function vLogin(msg){document.getElementById('nav').style.display='none';const mb=document.getElementById('mob');if(mb)mb.innerHTML='';
 document.getElementById('app').innerHTML=`<div class="card login"><span class="logo">M</span><h2>CRM Meyaclo</h2><p class="mute" style="margin:0 0 20px">Connectez-vous pour accéder à vos clients et commandes.</p><form id="lf"><div class="f"><label>E-mail</label><input name="email" type="email" required autocomplete="username"></div><div class="f"><label>Mot de passe</label><input name="pw" type="password" required autocomplete="current-password"></div><button type="submit">Se connecter</button><p class="down">${esc(msg||'')}</p></form><p class="mute" style="font-size:12px;text-align:center;margin:14px 0 0"><a href="conditions.html" target="_blank">Conditions d'utilisation</a> · <a href="confidentialite.html" target="_blank">Confidentialité</a></p></div>`;
 document.getElementById('lf').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target);const{error}=await sb.auth.signInWithPassword({email:f.get('email'),password:f.get('pw')});if(error)vLogin('Identifiants incorrects.');else start()}}
 
@@ -485,15 +575,89 @@ brands:'<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L2 12V2h10l8.6 8.6a2 2 0 0 
 team:'<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
 export:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
 settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>'};
-function nav(){document.getElementById('nav').innerHTML='<h1><span class="logo">M</span><span>CRM Meyaclo<small>Agence multimarque</small></span></h1>'+VIEWS.map(([k,l])=>`<a class="${state.view===k||(k==='clients'&&state.view==='client')?'on':''}" onclick="go('${k}',{from:''})"><svg viewBox="0 0 24 24">${ICONS[k]||''}</svg><span>${l}</span></a>`).join('')+`<div class="who">${linkedUser()?esc(linkedUser().name)+'<br>':''}${esc(me?.email)}${isAdmin?'<br><span class="badge" style="margin-top:4px">Administrateur</span>':''}<br><a onclick="logout()">Déconnexion</a></div>`}
+function nav(){mobBar();document.getElementById('nav').innerHTML='<h1><span class="logo">M</span><span>CRM Meyaclo<small>Agence multimarque</small></span></h1>'+VIEWS.map(([k,l])=>`<a class="${state.view===k||(k==='clients'&&state.view==='client')?'on':''}" onclick="go('${k}',{from:''})"><svg viewBox="0 0 24 24">${ICONS[k]||''}</svg><span>${l}</span></a>`).join('')+`<div class="who">${linkedUser()?esc(linkedUser().name)+'<br>':''}${esc(me?.email)}${isAdmin?'<br><span class="badge" style="margin-top:4px">Administrateur</span>':''}<br><a onclick="logout()">Déconnexion</a></div>`}
 function go(v,extra){Object.assign(state,{view:v},extra||{});render()}
 function render(){if(_map){state.mapView={c:_map.getCenter(),z:_map.getZoom()};_map.remove();_map=null}nav();if(['brands','team','export'].includes(state.view)){state.stab=state.view==='export'?'data':state.view;state.view='settings'}
 const V={dash:vDash,clients:vClients,client:vClient,orders:vOrders,obj:vObj,prospect:vProspect,agenda:vAgenda,settings:vSettings};document.getElementById('app').innerHTML=(V[state.view]||vDash)();
-if(state.view==='prospect'&&state.ptab==='map')drawMap(window._plist||[]);
+cardify();if(state.view==='prospect'&&state.ptab==='map')drawMap(window._plist||[]);
 if(state.view==='agenda'){const b=document.getElementById('tgb');if(b)b.scrollTop=state.calScroll??7*HOUR}}
 
 function evLine(e){const u=byId('users',e.userId),c=byId('clients',e.clientId);return`<div class="ev" style="border-color:${u?.color||'#999'}" onclick="evPeek('${e.id}')"><b>${fmtDate(e.date)} ${e.start||''}</b> · ${esc(e.type)} · ${esc(e.title)}${c?' — '+esc(c.name):''} <span class="mute">(${esc(u?.name)})</span>${e.gcalId?' 📅':''}${e.report?'<br><span class="mute">'+esc(e.report)+'</span>':''}</div>`}
 const seasonSel=(onch)=>`<select onchange="${onch}">${seasons().map(s=>`<option ${s===state.season?'selected':''}>${s}</option>`).join('')}</select>`;
+
+
+/* =================== VERSION TÉLÉPHONE =================== */
+const isMob=()=>matchMedia('(max-width:800px)').matches;
+const MTABS=[['dash','Accueil'],['clients','Clients'],['agenda','Agenda'],['prospect','Prospection']];
+function mobBar(){const el=document.getElementById('mob');if(!el)return;
+const more=['obj','orders','settings'].includes(state.view);
+el.innerHTML=`<div id="fab" onclick="mPlus()" aria-label="Ajouter">+</div><div id="tabbar">${MTABS.map(([k,l])=>`<a class="${state.view===k||(k==='clients'&&state.view==='client')?'on':''}" onclick="go('${k}',{from:''})"><svg viewBox="0 0 24 24">${ICONS[k]||''}</svg>${l}</a>`).join('')}<a class="${more?'on':''}" onclick="mMore()"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>Plus</a></div>`}
+function sheet(title,html){document.getElementById('modal').innerHTML=`<div class="modal" onclick="if(event.target===this)closeM()"><div class="box sheetbox"><div class="grab"></div>${title?`<h3>${title}</h3>`:''}${html}</div></div>`}
+const sItem=(ic,l,sub,js)=>`<a onclick="closeM();${js}"><i>${ic}</i><span>${l}${sub?`<small>${sub}</small>`:''}</span></a>`;
+function mMore(){sheet('',`<div class="sheet-list">${sItem('🎯','Objectifs','Par marque et par saison',"go('obj',{from:''})")}${sItem('🛒','Commandes','Toutes les lignes de commande',"go('orders',{from:''})")}${sItem('⚙️','Paramètres','Profil, marques, équipe, import / export',"go('settings',{from:''})")}</div>
+<div class="sheet-who">${linkedUser()?esc(linkedUser().name)+' · ':''}${esc(me?.email)}${isAdmin?' · <b>Administrateur</b>':''}</div>
+<div class="sheet-list">${sItem('⎋','Déconnexion','','logout()')}</div>`)}
+function mPlus(){const cid=state.view==='client'?state.clientId:'';const c=cid?byId('clients',cid):null;
+sheet(c?'Ajouter — '+esc(c.name):'Ajouter',`<div class="sheet-list">
+${sItem('📝','Compte rendu de visite','Note rapide sur le magasin, dictée possible',`quickReport('${cid}')`)}
+${sItem('📅','Rendez-vous','',`editEvent(null,'${cid}')`)}
+${sItem('🛒','Commande','',`editOrder(null,'${cid}')`)}
+${c?'':sItem('🏬','Client ou prospect','',`editClient()`)}</div>`)}
+
+// Liens utiles pour un magasin
+const cAddr=c=>[c.address,c.zip,c.city].filter(Boolean).join(' ');
+const cTel=c=>c.mobile||c.phone||(cContacts(c).find(k=>k.main&&k.phone)||cContacts(c).find(k=>k.phone)||{}).phone||'';
+const mapsUrl=c=>hasGeo(c)?`https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}`:`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(cAddr(c))}`;
+const wazeUrl=c=>hasGeo(c)?`https://waze.com/ul?ll=${c.lat},${c.lng}&navigate=yes`:`https://waze.com/ul?q=${encodeURIComponent(cAddr(c))}&navigate=yes`;
+const mA=(ic,l,href,cls='',js='')=>`<a class="mact ${cls}${href||js?'':' dis'}" ${href?`href="${esc(href)}"${/^http/.test(href)?' target="_blank" rel="noopener"':''}`:''}${js?` onclick="event.stopPropagation();${js}"`:' onclick="event.stopPropagation()"'}>${ic?`<span>${ic}</span>`:''}${l}</a>`;
+function mClientActions(c){const t=cTel(c),a=cAddr(c),em=c.email||(cContacts(c).find(k=>k.email)||{}).email||'';
+return`<div class="m-actions m-only">${mA('📞','Appeler',t?'tel:'+t.replace(/[^\d+]/g,''):'')}${mA('🧭','Itinéraire',a||hasGeo(c)?mapsUrl(c):'')}${mA('🚗','Waze',a||hasGeo(c)?wazeUrl(c):'')}${mA('✉️','E-mail',em?'mailto:'+em:'')}</div>
+<div class="m-actions m-only" style="grid-template-columns:1fr 1fr">${mA('📝','Compte rendu','','pri',`quickReport('${c.id}')`)}${mA('📅','Rendez-vous','','',`editEvent(null,'${c.id}')`)}</div>`}
+function mRowActions(c){const t=cTel(c),a=cAddr(c);return`<div class="m-rowact">${mA('','📞 Appeler',t?'tel:'+t.replace(/[^\d+]/g,''):'')}${mA('','🧭 Itinéraire',a||hasGeo(c)?mapsUrl(c):'')}${mA('','➕ RDV','','',`editEvent(null,'${c.id}')`)}</div>`}
+
+// Transforme les tableaux en cartes sur téléphone (sauf le tableau de saisie des objectifs)
+function cardify(root){if(!isMob())return;(root||document.getElementById('app')).querySelectorAll('table').forEach(t=>{
+if(t.classList.contains('mcards')||t.classList.contains('nocard')||t.querySelector('input.oc'))return;
+const rows=[...t.rows];const hi=rows.findIndex(r=>r.querySelector('th')&&!r.querySelector('td'));
+const labels=hi>=0?[...rows[hi].cells].map(c=>c.textContent.trim()):[];
+if(hi>=0)rows[hi].classList.add('mhead');
+const TP=['CLIENT','ENSEIGNE','MAGASIN','OBJET','MARQUE','COMMERCIAL','NOM'].map(k=>labels.findIndex(l=>N(l).startsWith(k))).find(i=>i>=0);const ti=TP===undefined?0:TP;
+rows.forEach((r,ri)=>{if(ri===hi)return;let col=0;[...r.cells].forEach(c=>{const span=+c.colSpan||1;
+if(span===1&&labels[col]&&!c.dataset.label)c.dataset.label=labels[col];if(col===ti&&span===1)c.classList.add('mtitle');
+if(c.querySelector('.barfill,.sbar')&&!c.textContent.trim())c.classList.add('mempty');
+else if(!c.textContent.trim()&&!c.querySelector('button,a,input,select,img,svg'))c.classList.add('mempty');
+col+=span})});
+t.classList.add('mcards')})}
+let _wasMob=null;addEventListener('resize',()=>{const m=isMob();if(_wasMob!==null&&m!==_wasMob&&me)render();_wasMob=m});
+
+// Compte rendu de visite rapide
+function quickReport(cid){const now=new Date(),td=iso(now),hm=gHHMM(now);
+const todays=db.events.filter(e=>e.date===td&&e.clientId&&e.status!=='Annulé').sort((a,b)=>Math.abs(toMin(a.start||'12:00')-toMin(hm))-Math.abs(toMin(b.start||'12:00')-toMin(hm)));
+if(!cid&&todays[0])cid=todays[0].clientId;
+const ev0=cid?todays.find(e=>e.clientId===cid):null;
+const types=cfg().eventTypes,typ=types.find(t=>/rdv|visite/i.test(t))||types[0];
+const hint=todays.length?`<p class="mute" style="margin:-4px 0 12px">📅 RDV du jour : ${todays.slice(0,3).map(e=>esc(byId('clients',e.clientId)?.name||'')+(e.start?' ('+esc(e.start)+')':'')).join(', ')}</p>`:'';
+form('Compte rendu de visite',[
+{k:'clientId',l:'Magasin',t:'select',o:[['','— Choisir —'],...sortedClients().map(c=>[c.id,c.name+(c.city?' — '+c.city:'')])]},
+{k:'brandId',l:'Marque concernée (optionnel)',t:'select',o:[['','—'],...[...db.brands].sort((a,b)=>a.name.localeCompare(b.name)).map(b=>[b.id,b.name])]},
+{k:'report',l:'Compte rendu — astuce : touchez le micro du clavier pour dicter',t:'area'}],
+{clientId:cid||'',brandId:ev0?.brandId||'',report:ev0?.report||''},
+d=>{if(!str(d.report)&&!d.clientId)return;const e=d.clientId?todays.find(x=>x.clientId===d.clientId):null;
+if(e){Object.assign(e,{report:d.report,status:'Fait',brandId:d.brandId||e.brandId||'',crmUpdated:Date.now()});putMany([['events',e]]);gPush(e,{quiet:1})}
+else{const o=upsert('events',null,{title:'Visite magasin',type:typ,date:td,start:hm,end:addH(hm),userId:myUser()?.id||'',clientId:d.clientId,brandId:d.brandId||'',status:'Fait',report:d.report,season:seasonOfDate(td),place:'',crmUpdated:Date.now()});gPush(o,{quiet:1})}
+toast('✅ Compte rendu enregistré')},null,
+hint+`<div class="bar" style="margin:-4px 0 10px"><button type="button" class="ghost" onclick="qrNear(this)">📍 Magasin le plus proche de moi</button></div>`);
+setTimeout(()=>{const t=document.querySelector('#fm textarea');if(t&&cid){t.rows=7;t.focus()}},250)}
+function qrNear(btn){if(!navigator.geolocation)return toast('Géolocalisation indisponible sur cet appareil.');btn.textContent='📍 Recherche…';
+navigator.geolocation.getCurrentPosition(p=>{const me_={lat:p.coords.latitude,lng:p.coords.longitude};
+const best=db.clients.filter(hasGeo).map(c=>({c,d:km(me_,c)})).sort((a,b)=>a.d-b.d)[0];
+if(!best){btn.textContent='📍 Aucun magasin géolocalisé';return}
+const s=document.querySelector('#fm [name=clientId]');if(s)s.value=best.c.id;
+btn.textContent=`📍 ${best.c.name} (${best.d<1?Math.round(best.d*1000)+' m':best.d.toFixed(1)+' km'})`;document.querySelector('#fm textarea')?.focus()},
+()=>{btn.textContent='📍 Position refusée';toast('Autorisez la localisation pour ce site dans les réglages du téléphone.')},{enableHighAccuracy:true,timeout:10000,maximumAge:60000})}
+
+// Appli installable
+if('serviceWorker' in navigator&&location.protocol==='https:')addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
 
 /* ---------- Vues ---------- */
 function vDash(){const today=iso(new Date());
@@ -544,8 +708,8 @@ const shown=list.slice(0,500);
 return`<h2>Clients (${db.clients.length})</h2><div class="bar"><input id="q" placeholder="Rechercher nom, ville, dépt, siège…" value="${esc(state.q)}" oninput="state.q=this.value;clearTimeout(window._t);window._t=setTimeout(()=>{render();const i=document.getElementById('q');i.focus();i.setSelectionRange(i.value.length,i.value.length)},300)">
 <select onchange="state.fActive=this.value;render()"><option value="ca" ${state.fActive==='ca'?'selected':''}>Actifs</option><option value="no" ${state.fActive==='no'?'selected':''}>Inactifs</option><option value="" ${!state.fActive?'selected':''}>Tous</option></select>
 ${S?'Saison '+seasonSel("state.season=this.value;render()"):''}<button onclick="editClient()">+ Nouveau client</button><span class="mute">${list.length} résultat(s)${list.length>500?' — 500 premiers affichés, affinez la recherche':''}</span></div>
-<div class="card"><table><tr><th>Enseigne</th><th>Ville</th><th>Dépt</th><th>Contact</th><th class="n">${esc(S||'CA')}</th><th class="n">N-1</th><th>Dernière saison</th></tr>
-${shown.map(c=>{const a=m.get(c.id)||Z;return`<tr class="click" onclick="go('client',{clientId:'${c.id}'})"><td><b>${esc(c.name)}</b></td><td>${esc(c.city)}</td><td>${esc(c.dept)}</td><td>${esc(c.contact)}</td><td class="n">${a.v?eur(a.v):''}</td><td class="n">${a.n1?eur(a.n1):''}</td><td>${esc(last.get(c.id)||'—')}</td></tr>`}).join('')||'<tr><td colspan="7" class="mute">Aucun client.</td></tr>'}</table></div>`}
+<div class="card"><table><tr><th>Enseigne</th><th>Ville</th><th>Dépt</th><th>Contact</th><th class="n">${esc(S||'CA')}</th><th class="n">N-1</th><th>Dernière saison</th><th class="m-col"></th></tr>
+${shown.map(c=>{const a=m.get(c.id)||Z;return`<tr class="click" onclick="go('client',{clientId:'${c.id}'})"><td><b>${esc(c.name)}</b></td><td>${esc(c.city)}</td><td>${esc(c.dept)}</td><td>${esc(c.contact)}</td><td class="n">${a.v?eur(a.v):''}</td><td class="n">${a.n1?eur(a.n1):''}</td><td>${esc(last.get(c.id)||'—')}</td><td class="m-col">${isMob()?mRowActions(c):''}</td></tr>`}).join('')||'<tr><td colspan="7" class="mute">Aucun client.</td></tr>'}</table></div>`}
 
 function ordersTable(os,showClient=true){return os.length?`<table><tr><th>Saison</th>${showClient?'<th>Client</th>':''}<th>Marque</th><th>Type</th><th>Commercial</th><th>Statut</th><th class="n">Objectif</th><th class="n">Réalisé HT</th><th class="n">N-1</th><th class="n">Commission</th></tr>${os.map(o=>`<tr class="click" onclick="editOrder('${o.id}')"><td>${esc(o.season)}</td>${showClient?`<td>${esc(byId('clients',o.clientId)?.name)}</td>`:''}<td>${esc(byId('brands',o.brandId)?.name)}</td><td>${esc(o.type)}</td><td>${esc(byId('users',o.userId)?.name)}</td><td>${stBadge(o.status)}</td><td class="n">${o.objective?eur(+o.objective):''}</td><td class="n">${eur(+o.amount)}</td><td class="n">${o.n1?eur(+o.n1):''}</td><td class="n">${eur(comm(o))}</td></tr>`).join('')}</table>`:'<p class="mute">Aucune commande.</p>'}
 const orderSort=(a,b)=>sVal(b.season)-sVal(a.season)||(b.date||'').localeCompare(a.date||'')||(+b.amount||0)-(+a.amount||0);
@@ -662,7 +826,7 @@ const nxD=nx?new Date(nx.date+'T00:00').toLocaleDateString('fr-FR'):'';
 return`<div class="bar">${state.from==='prospect'?`<button class="ghost" onclick="go('prospect',{from:''})">← Prospection</button>`:''}${state.from==='agenda'?`<button class="ghost" onclick="go('agenda',{from:''})">← Agenda</button>`:''}${state.from==='obj'?`<button class="ghost" onclick="go('obj',{from:''})">← Objectifs</button>`:''}<button class="ghost" onclick="go('clients',{from:''})">← Clients</button></div>
 <div class="ch"><div class="av">${esc(ini)}</div><div style="flex:1;min-width:0"><h2>${esc(c.name)}</h2><div class="sub">${esc(c.city||'')}${c.city?' · ':''}${tot?'<span class="up">●</span> Client':'<span class="mute">●</span> Prospect'}${c.dept?' · '+esc(c.dept):''}</div></div>
 <button class="ibtn" title="Exporter la fiche (Excel)" onclick="exportClient('${c.id}')">⤓</button><button class="ibtn" title="Modifier les informations" onclick="editClient('${c.id}')">⚙️</button><button class="ibtn red" title="Supprimer le client" onclick="cDelete('${c.id}')">🗑️</button></div>
-<div class="ck">${K('#b9770e','☆ Top marque',top?byId('brands',top[0])?.name||'?':'—',top?`${eur(top[1])} · ${Math.round(top[1]/tot*100)} % du CA`:'Aucune commande')}
+${mClientActions(c)}<div class="ck">${K('#b9770e','☆ Top marque',top?byId('brands',top[0])?.name||'?':'—',top?`${eur(top[1])} · ${Math.round(top[1]/tot*100)} % du CA`:'Aucune commande')}
 ${K('#a93244','CA total',eur(tot),`${oks.length} commande${oks.length>1?'s':''}`)}
 ${K('#1e8449','CA '+SEASON_NOW,eur(sum(oks.filter(o=>o.season===SEASON_NOW))),'Saison en cours')}
 ${K('#1d3557','Panier moyen',oks.length?eur(tot/oks.length):'—',`sur ${oks.length} commande${oks.length>1?'s':''}`)}
@@ -1049,10 +1213,10 @@ importing=false;state.season='';nav()}
 
 /* ---------- Formulaires ---------- */
 function form(title,fields,val,onSave,onDel,extra,opt){
-document.getElementById('modal').innerHTML=`<div class="modal" onclick="if(event.target===this)closeM()"><div class="box${opt?.wide?' wide':''}"><h3>${title}</h3><form id="fm">${fields.map(f=>{const v=val[f.k]??'';let inp;
+document.getElementById('modal').innerHTML=`<div class="modal" onclick="if(event.target===this)closeM()"><div class="box${opt?.wide?' wide':''}" style="position:relative"><button type="button" class="m-close m-only" onclick="closeM()" aria-label="Fermer">×</button><h3>${title}</h3><form id="fm">${fields.map(f=>{const v=val[f.k]??'';let inp;
 if(f.t==='select')inp=`<select name="${f.k}">${f.o.map(([ov,ol])=>`<option value="${esc(ov)}" ${String(v)===String(ov)?'selected':''}>${esc(ol)}</option>`).join('')}</select>`;
 else if(f.t==='area')inp=`<textarea name="${f.k}" rows="3">${esc(v)}</textarea>`;
-else inp=`<input name="${f.k}" type="${f.t==='num'?'number':(f.t||'text')}" value="${esc(v)}" ${f.t==='number'?'step="0.01"':''} ${f.req?'required':''}>`;
+else inp=`<input name="${f.k}" type="${f.t==='num'?'number':(f.t||'text')}" value="${esc(v)}" ${f.t==='number'?'step="0.01" inputmode="decimal"':''}${f.t==='num'?' inputmode="numeric"':''}${f.t==='tel'?' autocomplete="tel"':''}${f.t==='email'?' autocomplete="email" autocapitalize="off"':''} ${f.req?'required':''}>`;
 return`<div class="f${f.t==='area'?' full':''}"><label>${f.l}</label>${inp}</div>`}).join('')}${extra||''}
 <div class="bar" style="margin-top:14px"><button type="submit">Enregistrer</button><button type="button" class="ghost" onclick="closeM()">Annuler</button><span style="flex:1"></span>${onDel?'<button type="button" class="del" id="delb">Supprimer</button>':''}</div></form></div></div>`;
 document.getElementById('fm').onsubmit=e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));fields.filter(f=>f.t==='number').forEach(f=>d[f.k]=parseFloat(d[f.k])||0);onSave(d);closeM();render()};
